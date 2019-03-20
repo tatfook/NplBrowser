@@ -1,0 +1,10 @@
+.vs
+*.db
+*.opendb
+*.sdf
+*.suo
+*.log
+bin
+Debug
+sln
+build
