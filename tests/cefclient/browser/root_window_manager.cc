@@ -120,7 +120,7 @@ class ClientRequestContextHandler : public CefRequestContextHandler,
 
 RootWindowManager::RootWindowManager(bool terminate_when_all_windows_closed)
     : terminate_when_all_windows_closed_(terminate_when_all_windows_closed),
-      image_cache_(new ImageCache) {
+      image_cache_(new ImageCache){
   CefRefPtr<CefCommandLine> command_line =
       CefCommandLine::GetGlobalCommandLine();
   DCHECK(command_line.get());
@@ -294,6 +294,9 @@ void RootWindowManager::AddExtension(CefRefPtr<CefExtension> extension) {
   extensions_.insert(extension);
   NotifyExtensionsChanged();
 }
+
+
+
 
 void RootWindowManager::OnRootWindowCreated(
     scoped_refptr<RootWindow> root_window) {

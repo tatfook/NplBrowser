@@ -221,6 +221,10 @@ set(CEFCLIENT_MACOSX_SHARED_BROWSER_SRCS
   )
 source_group(shared\\\\browser FILES ${CEFCLIENT_MACOSX_SHARED_BROWSER_SRCS})
 
+# json
+file (GLOB json_files ${CEF_ROOT}/json/*.*)
+source_group(cefclient\\\\json FILES ${json_files})
+
 set(CEFCLIENT_MACOSX_SRCS
   ${CEFCLIENT_MACOSX_SRCS}
   ${CEFCLIENT_MACOSX_BROWSER_SRCS}
@@ -240,6 +244,7 @@ set(CEFCLIENT_MACOSX_HELPER_SRCS
 #cefclient Windows sources
 set(CEFCLIENT_WINDOWS_SRCS
   cefclient_win.cc
+  ${json_files}
   )
 source_group(cefclient FILES ${CEFCLIENT_WINDOWS_SRCS})
 
@@ -311,6 +316,7 @@ set(CEFCLIENT_WINDOWS_SRCS
   ${CEFCLIENT_WINDOWS_BROWSER_SRCS}
   ${CEFCLIENT_WINDOWS_RESOURCES_WIN_SRCS}
   ${CEFCLIENT_WINDOWS_SHARED_BROWSER_SRCS}
+  
   )
 
 # cefclient resources.
@@ -377,6 +383,7 @@ set(CEFCLIENT_RESOURCES_SRCS
   ${CEFCLIENT_RESOURCES_SHARED_RESOURCES_SRCS}
   )
 
+include_directories("${CEF_ROOT}/json")
 
 #
 # Shared configuration.
@@ -557,4 +564,11 @@ if(OS_WINDOWS)
   # Copy CEF binary and resource files to the target output directory.
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
+
+  ADD_CUSTOM_COMMAND(
+   TARGET cefclient
+   POST_BUILD
+   COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_BIN_DIR}
+   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:cefclient> ${OUTPUT_BIN_DIR}
+)
 endif()

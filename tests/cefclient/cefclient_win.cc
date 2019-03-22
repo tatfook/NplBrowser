@@ -18,6 +18,11 @@
 #include "tests/shared/common/client_switches.h"
 #include "tests/shared/renderer/client_app_renderer.h"
 
+#include <sstream>
+#include <iostream>
+#include <vector>
+
+using namespace std;
 // When generating projects with CMake the CEF_USE_SANDBOX value will be defined
 // automatically if using the required compiler version. Pass -DUSE_SANDBOX=OFF
 // to the CMake command-line to disable use of the sandbox.
@@ -38,7 +43,6 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   CefEnableHighDPISupport();
 
   CefMainArgs main_args(hInstance);
-
   void* sandbox_info = NULL;
 
 #if defined(CEF_USE_SANDBOX)
@@ -51,7 +55,6 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Parse command-line arguments.
   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
   command_line->InitFromString(::GetCommandLineW());
-
   // Create a ClientApp of the correct type.
   CefRefPtr<CefApp> app;
   ClientApp::ProcessType process_type = ClientApp::GetProcessType(command_line);
@@ -71,6 +74,13 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   scoped_ptr<MainContextImpl> context(new MainContextImpl(command_line, true));
 
   CefSettings settings;
+  if (command_line->HasSwitch("subprocess_name"))
+  {
+	  // Specify the path for the sub-process executable.
+	  CefString subprocess_name_s = command_line->GetSwitchValue("subprocess_name");
+	  //CefString(&settings.browser_subprocess_path).FromASCII(subprocess_name_s.ToString().c_str());
+  }
+  
 
 #if !defined(CEF_USE_SANDBOX)
   settings.no_sandbox = true;
@@ -78,7 +88,7 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
 
   // Populate the settings based on command line arguments.
   context->PopulateSettings(&settings);
-
+  settings.multi_threaded_message_loop = true;
   // Create the main message loop object.
   scoped_ptr<MainMessageLoop> message_loop;
   if (settings.multi_threaded_message_loop)
@@ -99,7 +109,23 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   window_config.with_controls =
       !command_line->HasSwitch(switches::kHideControls);
   window_config.with_osr = settings.windowless_rendering_enabled ? true : false;
-
+  // set window bounds
+  if (command_line->HasSwitch("bounds"))
+  {
+	  CefString bounds_s = command_line->GetSwitchValue("bounds");
+	  std::vector<int> rect;
+	  istringstream f(bounds_s.ToString());
+	  string s;
+	  while (getline(f, s, ',')) {
+		  int v = std::stoul(s);
+		  rect.push_back(v);
+	  }
+	  if (rect.size() == 4)
+	  {
+		  CefRect window_rect(rect[0], rect[1], rect[2], rect[3]);
+		  window_config.bounds = window_rect;
+	  }
+  }
   // Create the first window.
   context->GetRootWindowManager()->CreateRootWindow(window_config);
 
