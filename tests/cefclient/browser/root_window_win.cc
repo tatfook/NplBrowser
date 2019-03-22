@@ -353,6 +353,7 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
   if (parent_handle)
   {
 	  dwStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN;
+	  SetWindowLong(parent_handle, GWL_STYLE, GetWindowLong(parent_handle, GWL_STYLE) | WS_CLIPCHILDREN);
   }
   else {
 	  dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
@@ -378,16 +379,12 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
     width = window_rect.right - window_rect.left;
     height = window_rect.bottom - window_rect.top;
   }
-
+  LOG(INFO) << "==========x:" << x << " y:" << y << " width:" << width << " height:" << height;
   browser_settings_ = settings;
   // Create the main window initially hidden.
   CreateWindowEx(dwExStyle, window_name.c_str(), window_title.c_str(), dwStyle,
                  x, y, width, height, parent_handle, NULL, hInstance, this);
   CHECK(hwnd_);
-  if (parent_handle)
-  {
-	  SetWindowLong(parent_handle, GWL_STYLE, GetWindowLong(parent_handle, GWL_STYLE) | WS_CLIPCHILDREN);
-  }
   if (!called_enable_non_client_dpi_scaling_ && IsProcessPerMonitorDpiAware()) {
     // This call gets Windows to scale the non-client area when WM_DPICHANGED
     // is fired on Windows versions < 10.0.14393.0.

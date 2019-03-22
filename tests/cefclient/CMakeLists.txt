@@ -540,7 +540,7 @@ if(OS_WINDOWS)
     ${CEFCLIENT_RESOURCES_SRCS}
     ${CEFCLIENT_WINDOWS_SRCS}
     )
-
+  add_definitions(/W2)
   # Executable target.
   add_executable(${CEF_TARGET} WIN32 ${CEFCLIENT_SRCS})
   SET_EXECUTABLE_TARGET_PROPERTIES(${CEF_TARGET})

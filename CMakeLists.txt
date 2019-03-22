@@ -27,7 +27,6 @@ find_package(CEF REQUIRED)
 # directory.
 add_subdirectory(${CEF_LIBCEF_DLL_WRAPPER_PATH} libcef_dll_wrapper)
 add_subdirectory(tests/cefclient)
-add_subdirectory(NplCefProcess)
 add_subdirectory(NplCefPlugin)
 
 

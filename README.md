@@ -40,7 +40,6 @@ NPL.activate(dll_name,{ cmd = "Open", id = id, url = "http://www.wikicraft.cn/",
 -hide-top-menu
 -url=""
 -bounds="0,0,800,600"
--subprocess_name="NplCefProcess.exe"
 local parent_handle = ParaEngine.GetAttributeObject():GetField("AppHWND", 0);
 local cmdLine = [[-window_title="NplBrowser" -window_name="nplbrowser_wnd" -hide-top-menu -url="http://www.keepwork.com" -bounds="0,0,800,600"]];
 ParaGlobal.ShellExecute("open", ParaIO.GetCurDirectory(0).."cef3\\cefclient.exe", cmdLine, "", 1); 

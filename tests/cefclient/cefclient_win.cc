@@ -23,34 +23,15 @@
 #include <vector>
 
 using namespace std;
-// When generating projects with CMake the CEF_USE_SANDBOX value will be defined
-// automatically if using the required compiler version. Pass -DUSE_SANDBOX=OFF
-// to the CMake command-line to disable use of the sandbox.
-// Uncomment this line to manually enable sandbox support.
-// #define CEF_USE_SANDBOX 1
-
-#if defined(CEF_USE_SANDBOX)
-// The cef_sandbox.lib static library may not link successfully with all VS
-// versions.
-#pragma comment(lib, "cef_sandbox.lib")
-#endif
-
 namespace client {
 namespace {
 
 int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Enable High-DPI support on Windows 7 or newer.
-  CefEnableHighDPISupport();
+  //CefEnableHighDPISupport();
 
   CefMainArgs main_args(hInstance);
   void* sandbox_info = NULL;
-
-#if defined(CEF_USE_SANDBOX)
-  // Manage the life span of the sandbox information object. This is necessary
-  // for sandbox support on Windows. See cef_sandbox_win.h for complete details.
-  CefScopedSandboxInfo scoped_sandbox;
-  sandbox_info = scoped_sandbox.sandbox_info();
-#endif
 
   // Parse command-line arguments.
   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
@@ -74,17 +55,8 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   scoped_ptr<MainContextImpl> context(new MainContextImpl(command_line, true));
 
   CefSettings settings;
-  if (command_line->HasSwitch("subprocess_name"))
-  {
-	  // Specify the path for the sub-process executable.
-	  CefString subprocess_name_s = command_line->GetSwitchValue("subprocess_name");
-	  //CefString(&settings.browser_subprocess_path).FromASCII(subprocess_name_s.ToString().c_str());
-  }
-  
 
-#if !defined(CEF_USE_SANDBOX)
   settings.no_sandbox = true;
-#endif
 
   // Populate the settings based on command line arguments.
   context->PopulateSettings(&settings);
@@ -103,6 +75,7 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
 
   // Register scheme handlers.
   test_runner::RegisterSchemeHandlers();
+
 
   RootWindowConfig window_config;
   window_config.always_on_top = command_line->HasSwitch(switches::kAlwaysOnTop);
