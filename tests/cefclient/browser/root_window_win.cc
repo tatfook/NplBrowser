@@ -379,7 +379,6 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
     width = window_rect.right - window_rect.left;
     height = window_rect.bottom - window_rect.top;
   }
-  LOG(INFO) << "==========x:" << x << " y:" << y << " width:" << width << " height:" << height;
   browser_settings_ = settings;
   // Create the main window initially hidden.
   CreateWindowEx(dwExStyle, window_name.c_str(), window_title.c_str(), dwStyle,
@@ -1252,7 +1251,6 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		int y = input["y"];
 		int width = input["width"];
 		int height = input["height"];
-		int withControl = input["withControl"];
 
 
 		CefRefPtr<CefBrowser> b = this->GetBrowser();
@@ -1261,10 +1259,14 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		}
 		if (cmd == "Start")
 		{
+			//do nothing
 		}
 		else if (cmd == "Open")
 		{
-			b->GetMainFrame().get()->LoadURL(url);
+			if (!url.empty())
+			{
+				b->GetMainFrame().get()->LoadURL(url);
+			}
 			if (resize)
 			{
 				this->SetBounds(x, y, width, height);
@@ -1277,9 +1279,6 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		else if (cmd == "ChangePosSize")
 		{
 			this->SetBounds(x, y, width, height);
-		}
-		else if (cmd == "Delete")
-		{
 		}
 		else if (cmd == "Show")
 		{

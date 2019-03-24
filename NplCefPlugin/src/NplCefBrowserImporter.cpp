@@ -1,9 +1,5 @@
 #include "stdafx.h"
 
-#include <string>
-#include <thread>
-#include <sstream>
-#include <fstream>
 
 #include "INPLRuntimeState.h"
 #include "NPLInterface.hpp"
@@ -14,12 +10,11 @@ using namespace nlohmann;
 struct BrowserParams
 {
 	std::string cmd;
-	std::string subProcessName;
-	intptr_t parentHandle;
+	std::string cmdline;
+	std::string client_name;
+	std::string parent_handle;
 	std::string id;
 	std::string url;
-	bool showTitleBar = false;
-	bool withControl = false;
 	int x = 0;
 	int y = 0;
 	int width = 800;
@@ -34,12 +29,11 @@ json ToJson(BrowserParams p)
 {
 	json out;
 	out["cmd"] = p.cmd;
-	out["subProcessName"] = p.subProcessName;
-	out["parentHandle"] = p.parentHandle;
+	out["cmdline"] = p.cmdline;
+	out["client_name"] = p.client_name;
+	out["parent_handle"] = p.parent_handle;
 	out["id"] = p.id;
 	out["url"] = p.url;
-	out["showTitleBar"] = p.showTitleBar;
-	out["withControl"] = p.withControl;
 	out["x"] = p.x;
 	out["y"] = p.y;
 	out["width"] = p.width;
@@ -53,13 +47,11 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
 {
 	BrowserParams params;
 	params.cmd = tabMsg["cmd"];
-	params.subProcessName = tabMsg["subProcessName"];
-	double parentHandle = tabMsg["parentHandle"];
-	params.parentHandle = (intptr_t)parentHandle;
+	params.cmdline = tabMsg["cmdline"];
+	params.client_name = tabMsg["client_name"];
+	params.parent_handle = tabMsg["parent_handle"];
 	params.id = tabMsg["id"];
 	params.url = tabMsg["url"];
-	params.showTitleBar = tabMsg["showTitleBar"];
-	params.withControl = tabMsg["withControl"];
 	params.resize = tabMsg["resize"];
 	params.visible = tabMsg["visible"];
 	params.enabled = tabMsg["enabled"];
@@ -211,23 +203,36 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 		NPLInterface::NPLObjectProxy tabMsg = NPLInterface::NPLHelper::MsgStringToNPLTable(sMsg);
 		json input = Read(tabMsg);
 		std::string id = input["id"];
-		if (id.empty()) {
-			id = "CEFCLIENT";
+		std::string cmd = input["cmd"];
+		
+		id = id.empty() ? "CEFCLIENT" : id;
+		if (cmd == "Start") {
+			std::string client_name = input["client_name"];
+			client_name = client_name.empty() ? "cefcleint.exe" : client_name;
+			std::string cmdline = input["cmdline"];
+			ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
 		}
-		HWND hwnd = FindWindowA(id.c_str(), NULL);
-		if (hwnd)
+		else 
 		{
-			std::string json_str = input.dump();
-			LPSTR s = const_cast<char*>(json_str.c_str());
-			strcpy(s, input.dump().c_str());
-			COPYDATASTRUCT MyCDS;
-			MyCDS.dwData = 1; // function identifier
-			MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
-			MyCDS.lpData = s;           // data structure
+			std::string parent_handle_s = input["parent_handle"];
+			HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
+			HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
+			if (hwnd)
+			{
+				std::string json_str = input.dump();
+				LPSTR s = const_cast<char*>(json_str.c_str());
+				strcpy(s, input.dump().c_str());
+				COPYDATASTRUCT MyCDS;
+				MyCDS.dwData = 1; // function identifier
+				MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
+				MyCDS.lpData = s;           // data structure
 
-			SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)&MyCDS);
+				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)&MyCDS);
 
+			}
 		}
+
+		
 	}
 }
 

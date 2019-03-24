@@ -9,4 +9,9 @@
 #include <windows.h>
 #include <wchar.h>
 #include <string.h>
+#include <thread>
+#include <sstream>
+#include <fstream>
+#include <ShellAPI.h>
+
 #include <map>
