@@ -24,6 +24,8 @@ git clone --recursive https://github.com/LiXizhi/NPLRuntime.git
 ``` 
 - [Command Line Arguments](https://bitbucket.org/chromiumembedded/cef/wiki/GeneralUsage#markdown-header-command-line-arguments)
 ### Command line args
+
+- https://api.github.com/repos/tatfook/NplBrowser/releases?per_page=100
 ```lua
 ---------------------------------------------------------------------------
 -window_title="NplBrowser"
@@ -34,26 +36,27 @@ git clone --recursive https://github.com/LiXizhi/NPLRuntime.git
 -url="http://www.keepwork.com"
 -bounds="0,0,800,600"
 ---------------------------------------------------------------------------
-NPL.load("(gl)Mod/NplBrowser/NplBrowserManager.lua");
-local NplBrowserManager = commonlib.gettable("Mod.NplBrowser.NplBrowserManager");
+NPL.load("(gl)Mod/NplBrowser/NplBrowserPlugin.lua");
+local NplBrowserPlugin = commonlib.gettable("Mod.NplBrowser.NplBrowserPlugin");
 local id = "nplbrowser_wnd";
-NplBrowserManager.Start({id = id, url = "http://www.keepwork.com", withControl = true, bounds="0,0,800,600"});
-NplBrowserManager.Open({id = id, url = "http://www.keepwork.com", resize = true, x = 100, y = 100, width = 1024, height = 768, });
-NplBrowserManager.Show({id = id, visible = false});
-NplBrowserManager.EnableWindow({id = id, enabled = false});
-NplBrowserManager.ChangePosSize({id = id, x = 100, y = 100, width = 400, height = 400, });
-NplBrowserManager.Quit({id = id,});
+NplBrowserPlugin.Start({id = id, url = "http://www.keepwork.com", withControl = true, x = 0, y = 0, width = 800, height = 600, });
+NplBrowserPlugin.Open({id = id, url = "http://www.keepwork.com", resize = true, x = 100, y = 100, width = 1024, height = 768, });
+NplBrowserPlugin.Show({id = id, visible = false});
+NplBrowserPlugin.EnableWindow({id = id, enabled = false});
+NplBrowserPlugin.ChangePosSize({id = id, x = 100, y = 100, width = 400, height = 400, });
+NplBrowserPlugin.Quit({id = id,});
 ---------------------------------------------------------------------------
+
 -- start with cmdline directly
 local parent_handle = ParaEngine.GetAttributeObject():GetField("AppHWND", 0);
 parent_handle = tostring(parent_handle);
-local cmdLine = string.format([[
+local cmdLine = string.format('
     -window_title="NplBrowser" 
     -window_name="nplbrowser_wnd" 
     -hide-top-menu 
     -url="http://www.keepwork.com" 
     -bounds="0,0,800,600"
     -parent_handle="%s"
-]],parent_handle);
+',parent_handle);
 ParaGlobal.ShellExecute("open", ParaIO.GetCurDirectory(0).."cef3\\cefclient.exe", cmdLine, "", 1); 
 ```
