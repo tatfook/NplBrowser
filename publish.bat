@@ -1,5 +1,5 @@
 @echo off 
-
+rem compress every file
 set root=%cd%
 set input=.\deps\NPLRuntime\ParaWorld\bin32\cef3\*.*
 set output=.\deps\NPLRuntime\ParaWorld\bin32\cef3_publish\

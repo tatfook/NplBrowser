@@ -18,7 +18,10 @@ set(NPLRuntime_DIR "${PROJECT_SOURCE_DIR}/deps/NPLRuntime" CACHE STRING "")
 set(ParaEngineClient_SOURCE_DIR ${NPLRuntime_DIR}/Client/trunk/ParaEngineClient)
 set( OUTPUT_BIN_DIR "${NPLRuntime_DIR}/ParaWorld/bin32/cef3" )
 
-
+message("==========BoostRoot_DIR:" ${BoostRoot_DIR})
+message("==========NPLRuntime_DIR:" ${NPLRuntime_DIR})
+message("==========ParaEngineClient_SOURCE_DIR:" ${ParaEngineClient_SOURCE_DIR})
+message("==========OUTPUT_BIN_DIR:" ${OUTPUT_BIN_DIR})
 # Execute FindCEF.cmake which must exist in CMAKE_MODULE_PATH.
 find_package(CEF REQUIRED)
 

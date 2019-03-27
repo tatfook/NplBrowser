@@ -2,30 +2,31 @@
 Embed chromium into paracraft
 
 ### Building with vs2017
-- clone NplBrowser and its submodule
+ 1. clone NplBrowser and its submodule
 ```
-git clone --recursive https://github.com/LiXizhi/NPLRuntime.git
+git clone --recursive https://github.com/tatfook/NplBrowser.git
 ```
-- run build.bat
-- check binaries at: **deps/NPLRuntime/ParaWorld/bin32/cef3**
+ 2. run cmd 
+```
+.\build.bat
+```
+ 3. check binaries at: **deps/NPLRuntime/ParaWorld/bin32/cef3**
 - build nplruntime [optional]
-    - build boost 1.68.0
+    - build boost 1.68.0, set environment: BOOST_ROOT
     - build nplruntime
 
-
 ### Deps
- - cef3 win32 lib: [03/08/2019 - CEF 3.3626.1895.g7001d56 / Chromium 72.0.3626.121](http://opensource.spotify.com/cefbuilds/index.html)
- - build boost cmds
+ - NplBrowser depend on cef3 [03/08/2019 - CEF 3.3626.1895.g7001d56 / Chromium 72.0.3626.121](http://opensource.spotify.com/cefbuilds/index.html)
+ - build boost
 ```bash
 # debug
 .\b2.exe address-model=32 toolset=msvc-14.1 runtime-link=static threading=multi variant=debug --with-thread --with-date_time --with-filesystem --with-system --with-chrono --with-signals --with-serialization --with-iostreams --with-regex stage
 # release
 .\b2.exe address-model=32 toolset=msvc-14.1 runtime-link=static threading=multi variant=release --with-thread --with-date_time --with-filesystem --with-system --with-chrono --with-signals --with-serialization --with-iostreams --with-regex stage
 ``` 
-- [Command Line Arguments](https://bitbucket.org/chromiumembedded/cef/wiki/GeneralUsage#markdown-header-command-line-arguments)
+- [chromium cmd line](https://bitbucket.org/chromiumembedded/cef/wiki/GeneralUsage#markdown-header-command-line-arguments)
 ### Command line args
 
-- https://api.github.com/repos/tatfook/NplBrowser/releases?per_page=100
 ```lua
 ---------------------------------------------------------------------------
 -window_title="NplBrowser"
@@ -47,7 +48,7 @@ NplBrowserPlugin.ChangePosSize({id = id, x = 100, y = 100, width = 400, height =
 NplBrowserPlugin.Quit({id = id,});
 ---------------------------------------------------------------------------
 
--- start with cmdline directly
+-- start nplbrowser with cmdline directly in paracraft
 local parent_handle = ParaEngine.GetAttributeObject():GetField("AppHWND", 0);
 parent_handle = tostring(parent_handle);
 local cmdLine = string.format('
@@ -60,3 +61,10 @@ local cmdLine = string.format('
 ',parent_handle);
 ParaGlobal.ShellExecute("open", ParaIO.GetCurDirectory(0).."cef3\\cefclient.exe", cmdLine, "", 1); 
 ```
+### Links
+- [NplBrowser assets](https://api.github.com/repos/tatfook/NplBrowser/releases?per_page=100)
+
+
+![image](https://user-images.githubusercontent.com/5885941/55061101-e26efe80-50ad-11e9-94a9-edd185e880bd.png)
+
+
