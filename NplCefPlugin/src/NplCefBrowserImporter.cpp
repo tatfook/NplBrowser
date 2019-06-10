@@ -208,6 +208,7 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 		json input = Read(tabMsg);
 		std::string id = input["id"];
 		std::string cmd = input["cmd"];
+		std::string callback = tabMsg["callback"];
 		
 		id = id.empty() ? "CEFCLIENT" : id;
 		if (cmd == "Start") {
@@ -215,6 +216,12 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 			client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 			std::string cmdline = input["cmdline"];
 			ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
+
+			std::string codes = "msg = { opened = true, ";
+			codes.append("id = \"");
+			codes.append(id.c_str());
+			codes.append("\", }");
+			pState->activate(callback.c_str(), codes.c_str(), codes.length());
 		}
 		else 
 		{
