@@ -22,6 +22,7 @@ struct BrowserParams
 	bool visible = true;
 	bool resize = true;
 	bool enabled = true;
+	double zoom = 1.0;
 
 
 };
@@ -41,6 +42,7 @@ json ToJson(BrowserParams p)
 	out["visible"] = p.visible;
 	out["resize"] = p.resize;
 	out["enabled"] = p.enabled;
+	out["zoom"] = p.zoom;
 	return out;
 }
 json Read(NPLInterface::NPLObjectProxy tabMsg)
@@ -59,10 +61,12 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
 	double y = tabMsg["y"];
 	double width = tabMsg["width"];
 	double height = tabMsg["height"];
+	double zoom = tabMsg["zoom"];
 	params.x = x;
 	params.y = y;
 	params.width = width;
 	params.height = height;
+	params.zoom = zoom;
 
 	return ToJson(params);
 }
@@ -223,12 +227,11 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 				LPSTR s = const_cast<char*>(json_str.c_str());
 				strcpy(s, input.dump().c_str());
 				COPYDATASTRUCT MyCDS;
-				MyCDS.dwData = 1; // function identifier
+				MyCDS.dwData = 1; // function identifierz
 				MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
 				MyCDS.lpData = s;           // data structure
 
 				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)&MyCDS);
-
 			}
 		}
 

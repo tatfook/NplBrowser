@@ -1251,6 +1251,7 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		int y = input["y"];
 		int width = input["width"];
 		int height = input["height"];
+		double zoom = input["zoom"];
 
 
 		CefRefPtr<CefBrowser> b = this->GetBrowser();
@@ -1274,6 +1275,11 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
+				b->GetHost()->SetZoomLevel(zoom);
+			}
+			if (zoom != 0)
+			{
+				b->GetHost()->SetZoomLevel(zoom);
 			}
 		}
 		else if (cmd == "ChangePosSize")
@@ -1285,11 +1291,16 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
+				b->GetHost()->SetZoomLevel(zoom);
 			}
 			else
 			{
 				this->Hide();
 			}
+		}
+		else if (cmd == "Zoom")
+		{
+			b->GetHost()->SetZoomLevel(zoom);
 		}
 		else if (cmd == "EnableWindow")
 		{

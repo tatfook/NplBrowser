@@ -99,6 +99,8 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
 		  window_config.bounds = window_rect;
 	  }
   }
+  window_config.url = command_line->GetSwitchValue("url").ToString();
+
   // Create the first window.
   context->GetRootWindowManager()->CreateRootWindow(window_config);
 
