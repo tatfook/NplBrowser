@@ -10,11 +10,12 @@ using namespace nlohmann;
 struct BrowserParams
 {
 	std::string cmd;
-	std::string cmdline;
+    std::string callback_file;
+    std::string cmdline;
 	std::string client_name;
 	std::string parent_handle;
 	std::string id;
-	std::string url;
+    std::string url;
 	int x = 0;
 	int y = 0;
 	int width = 800;
@@ -30,7 +31,8 @@ json ToJson(BrowserParams p)
 {
 	json out;
 	out["cmd"] = p.cmd;
-	out["cmdline"] = p.cmdline;
+    out["callback_file"] = p.callback_file;
+    out["cmdline"] = p.cmdline;
 	out["client_name"] = p.client_name;
 	out["parent_handle"] = p.parent_handle;
 	out["id"] = p.id;
@@ -49,7 +51,8 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
 {
 	BrowserParams params;
 	params.cmd = tabMsg["cmd"];
-	params.cmdline = tabMsg["cmdline"];
+    params.callback_file = tabMsg["callback_file"];
+    params.cmdline = tabMsg["cmdline"];
 	params.client_name = tabMsg["client_name"];
 	params.parent_handle = tabMsg["parent_handle"];
 	params.id = tabMsg["id"];
@@ -69,6 +72,17 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
 	params.zoom = zoom;
 
 	return ToJson(params);
+}
+void NPL_Activate(NPL::INPLRuntimeState* pState, std::string activateFile, NPLInterface::NPLObjectProxy& data) {
+
+    if (!pState || activateFile.empty())
+    {
+        return;
+    }
+    std::string data_string;
+    NPLInterface::NPLHelper::NPLTableToString("msg", data, data_string);
+    pState->activate(activateFile.c_str(), data_string.c_str(), data_string.length());
+
 }
 #pragma region PE_DLL 
 
@@ -208,8 +222,10 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 		json input = Read(tabMsg);
 		std::string id = input["id"];
 		std::string cmd = input["cmd"];
-		std::string callback = tabMsg["callback"];
-		
+		std::string callback_file = input["callback_file"];
+        std::string parent_handle_s = input["parent_handle"];
+        HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
+        printf("running id:%s,cmd:%s\n", id.c_str(),cmd.c_str());
 		id = id.empty() ? "CEFCLIENT" : id;
 		if (cmd == "Start") {
 			std::string client_name = input["client_name"];
@@ -217,16 +233,23 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 			std::string cmdline = input["cmdline"];
 			ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
 
-			std::string codes = "msg = { opened = true, ";
-			codes.append("id = \"");
-			codes.append(id.c_str());
-			codes.append("\", }");
-			pState->activate(callback.c_str(), codes.c_str(), codes.length());
-		}
+		} else if (cmd == "CheckCefWindow")
+		{
+            HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
+            bool bFound = false;
+            if (hwnd)
+            {
+                bFound = true;
+            }
+
+            NPLInterface::NPLObjectProxy data;
+            data["cmd"] = cmd;
+            data["value"] = bFound;
+            data["id"] = id;
+            NPL_Activate(pState, callback_file, data);
+        }
 		else 
 		{
-			std::string parent_handle_s = input["parent_handle"];
-			HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
 			HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
 			if (hwnd)
 			{
@@ -239,6 +262,12 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 				MyCDS.lpData = s;           // data structure
 
 				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)&MyCDS);
+
+                NPLInterface::NPLObjectProxy data;
+                data["cmd"] = cmd;
+                data["id"] = id;
+
+                NPL_Activate(pState, callback_file, data);
 			}
 		}
 
