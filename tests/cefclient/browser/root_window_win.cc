@@ -1309,12 +1309,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
-				b->GetHost()->SetZoomLevel(zoom);
-			}
-			if (zoom != 0)
-			{
-				b->GetHost()->SetZoomLevel(zoom);
-			}
+                b->GetHost()->SetZoomLevel(zoom);
+            }
 		}
 		else if (cmd == "ChangePosSize")
 		{
@@ -1325,7 +1321,7 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
-				b->GetHost()->SetZoomLevel(zoom);
+                b->GetHost()->SetZoomLevel(zoom);
 			}
 			else
 			{
