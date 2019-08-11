@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include <tlhelp32.h>
 
 #include "INPLRuntimeState.h"
 #include "NPLInterface.hpp"
@@ -14,7 +15,9 @@ struct BrowserParams
     std::string cmdline;
 	std::string client_name;
 	std::string parent_handle;
-	std::string id;
+    std::string cefclient_config_filename;
+    std::string pid; //process id
+    std::string id;
     std::string url;
 	int x = 0;
 	int y = 0;
@@ -23,9 +26,9 @@ struct BrowserParams
 	bool visible = true;
 	bool resize = true;
 	bool enabled = true;
-	double zoom = 1.0;
+	double zoom = 0.0;
 
-
+    
 };
 json ToJson(BrowserParams p)
 {
@@ -34,7 +37,9 @@ json ToJson(BrowserParams p)
     out["callback_file"] = p.callback_file;
     out["cmdline"] = p.cmdline;
 	out["client_name"] = p.client_name;
-	out["parent_handle"] = p.parent_handle;
+    out["parent_handle"] = p.parent_handle;
+    out["cefclient_config_filename"] = p.cefclient_config_filename;
+    out["pid"] = p.pid;
 	out["id"] = p.id;
 	out["url"] = p.url;
 	out["x"] = p.x;
@@ -54,7 +59,9 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
     params.callback_file = tabMsg["callback_file"];
     params.cmdline = tabMsg["cmdline"];
 	params.client_name = tabMsg["client_name"];
-	params.parent_handle = tabMsg["parent_handle"];
+    params.parent_handle = tabMsg["parent_handle"];
+    params.cefclient_config_filename = tabMsg["cefclient_config_filename"];
+    params.pid = tabMsg["pid"];
 	params.id = tabMsg["id"];
 	params.url = tabMsg["url"];
 	params.resize = tabMsg["resize"];
@@ -210,6 +217,42 @@ void __attribute__((constructor)) DllMain()
 #endif
 }
 #pragma endregion PE_DLL 
+
+DWORD FindProcessId(const char* processName)
+{
+    // strip path
+
+    const char* p = strrchr(processName, '\\');
+    if (p)
+        processName = p + 1;
+
+    PROCESSENTRY32 processInfo;
+    processInfo.dwSize = sizeof(processInfo);
+
+    HANDLE processesSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+    if (processesSnapshot == INVALID_HANDLE_VALUE)
+        return 0;
+
+    Process32First(processesSnapshot, &processInfo);
+    if (!strcmp(processName, processInfo.szExeFile))
+    {
+        CloseHandle(processesSnapshot);
+        return processInfo.th32ProcessID;
+    }
+
+    while (Process32Next(processesSnapshot, &processInfo))
+    {
+        if (!strcmp(processName, processInfo.szExeFile))
+        {
+            CloseHandle(processesSnapshot);
+            return processInfo.th32ProcessID;
+        }
+    }
+
+    CloseHandle(processesSnapshot);
+    return 0;
+}
+
 CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 {
 	if (nType == ParaEngine::PluginActType_STATE)
@@ -226,49 +269,58 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
         std::string parent_handle_s = input["parent_handle"];
         HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
         printf("running id:%s,cmd:%s\n", id.c_str(),cmd.c_str());
+        std::string client_name = input["client_name"];
+        client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 		id = id.empty() ? "CEFCLIENT" : id;
 		if (cmd == "Start") {
-			std::string client_name = input["client_name"];
-			client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 			std::string cmdline = input["cmdline"];
 			ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
 
-		} else if (cmd == "CheckCefWindow")
+		} 
+        /*else if (cmd == "CheckCefWindow")
 		{
-            HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
-            bool bFound = false;
-            if (hwnd)
+            DWORD pid = FindProcessId(client_name.c_str());
+            if (pid)
             {
-                bFound = true;
-            }
+                HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
+                bool bFound = false;
+                if (hwnd)
+                {
+                    bFound = true;
+                }
 
-            NPLInterface::NPLObjectProxy data;
-            data["cmd"] = cmd;
-            data["value"] = bFound;
-            data["id"] = id;
-            NPL_Activate(pState, callback_file, data);
-        }
+                NPLInterface::NPLObjectProxy data;
+                data["cmd"] = cmd;
+                data["value"] = bFound;
+                data["id"] = id;
+                NPL_Activate(pState, callback_file, data);
+            }
+        }*/
 		else 
 		{
-			HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
-			if (hwnd)
-			{
-				std::string json_str = input.dump();
-				LPSTR s = const_cast<char*>(json_str.c_str());
-				strcpy(s, input.dump().c_str());
-				COPYDATASTRUCT MyCDS;
-				MyCDS.dwData = 1; // function identifierz
-				MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
-				MyCDS.lpData = s;           // data structure
+            HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
+            if (hwnd)
+            {
+                std::string json_str = input.dump();
+                LPSTR s = const_cast<char*>(json_str.c_str());
+                strcpy(s, input.dump().c_str());
+                COPYDATASTRUCT MyCDS;
+                MyCDS.dwData = 1; // function identifierz
+                MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
+                MyCDS.lpData = s;           // data structure
 
-				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)&MyCDS);
+                SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
 
                 NPLInterface::NPLObjectProxy data;
                 data["cmd"] = cmd;
                 data["id"] = id;
+                data["parent_handle"] = parent_handle_s;
 
                 NPL_Activate(pState, callback_file, data);
-			}
+            }
+
+          
+			
 		}
 
 		

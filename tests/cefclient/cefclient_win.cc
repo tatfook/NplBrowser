@@ -17,11 +17,10 @@
 #include "tests/shared/common/client_app_other.h"
 #include "tests/shared/common/client_switches.h"
 #include "tests/shared/renderer/client_app_renderer.h"
-
 #include <sstream>
 #include <iostream>
 #include <vector>
-
+#include "tests/cefclient/CefClientConfig.h"
 using namespace std;
 namespace client {
 namespace {
@@ -45,7 +44,6 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
     app = new ClientAppRenderer();
   else if (process_type == ClientApp::OtherProcess)
     app = new ClientAppOther();
-
   // Execute the secondary process, if any.
   int exit_code = CefExecuteProcess(main_args, app, sandbox_info);
   if (exit_code >= 0)
@@ -104,6 +102,15 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Create the first window.
   context->GetRootWindowManager()->CreateRootWindow(window_config);
 
+  std::string cefclient_config_filename = command_line->GetSwitchValue("cefclient_config_filename").ToString();
+  std::string pid = command_line->GetSwitchValue("pid").ToString();
+  std::string id = command_line->GetSwitchValue("window_name").ToString();
+  std::string parent_handle_s = command_line->GetSwitchValue("parent_handle").ToString();
+  std::string key = id + "_" + parent_handle_s;
+  LOG(INFO) << "cefclient_config_filename is:" << cefclient_config_filename;
+  LOG(INFO) << "pid is:" << pid;
+
+
   // Run the message loop. This will block until Quit() is called by the
   // RootWindowManager after all windows have been destroyed.
   int result = message_loop->Run();
@@ -114,6 +121,13 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Release objects in reverse order of creation.
   message_loop.reset();
   context.reset();
+
+  //clear config
+  if (!cefclient_config_filename.empty() && !pid.empty())
+  {
+      LOG(INFO) << "erase config by pid:" << pid << " key:" << key;
+      CefClientConfig::GetInstance(cefclient_config_filename, pid)->EraseJsonValue(key);
+  }
 
   return result;
 }

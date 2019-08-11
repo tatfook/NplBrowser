@@ -21,6 +21,7 @@
 #include "tests/shared/common/client_switches.h"
 #include "tests/cefclient/browser/root_window_manager.h"
 #include "json.hpp"
+#include "tests/cefclient/CefClientConfig.h"
 #define MAX_URL_LENGTH 255
 #define BUTTON_WIDTH 72
 #define URLBAR_HEIGHT 24
@@ -1014,9 +1015,13 @@ void RootWindowWin::OnBrowserCreated(CefRefPtr<CefBrowser> browser) {
   } else {
     // Make sure the browser is sized correctly.
     OnSize(false);
+    
+
   }
 
   delegate_->OnBrowserCreated(this, browser);
+
+  
 }
 
 void RootWindowWin::OnBrowserWindowDestroyed() {
@@ -1252,9 +1257,38 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		int width = input["width"];
 		int height = input["height"];
 		double zoom = input["zoom"];
+        std::string parent_handle_s = input["parent_handle"];
+        std::string cefclient_config_filename = input["cefclient_config_filename"];
+        std::string pid = input["pid"];
+        
+        std::string key = id + "_" + parent_handle_s;
 
+        LOG(INFO) << "handle msg:" << cmd;
+        CefRefPtr<CefBrowser> b = this->GetBrowser();
+        if (cmd == "CheckCefWindow")
+        {
 
-		CefRefPtr<CefBrowser> b = this->GetBrowser();
+            LOG(INFO) << "CheckCefWindow:" << key;
+            if (b)
+            {
+                LOG(INFO) << "CheckCefWindow:" << key << " is created";
+                bool has_browser = false;
+                LOG(INFO) << "CheckCefWindow: read value " << key;
+                CefClientConfig::GetInstance(cefclient_config_filename,pid)->ReadJsonValue(key, has_browser);
+                LOG(INFO) << "before CheckCefWindow result:" << has_browser;
+                if (!has_browser)
+                {
+                    has_browser = true;
+                    CefClientConfig::GetInstance(cefclient_config_filename, pid)->WriteJsonValue(key, true);
+                    LOG(INFO) << "after CheckCefWindow result:" << has_browser;
+                }
+            }
+            else {
+                LOG(INFO) << "CheckCefWindow: browser is null:" << key;
+            }
+            return;
+        }
+
 		if (!b) {
 			return;
 		}
@@ -1308,7 +1342,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		}
 		else if (cmd == "Quit")
 		{
-			this->Close(true);
+            this->Close(true);
+
 		}
 	}
 	catch (...)

@@ -143,7 +143,7 @@ scoped_refptr<RootWindow> RootWindowManager::CreateRootWindow(
   scoped_refptr<RootWindow> root_window =
       RootWindow::Create(MainContext::Get()->UseViews());
   root_window->Init(this, config, settings);
-
+  
   // Store a reference to the root window on the main thread.
   OnRootWindowCreated(root_window);
 

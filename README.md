@@ -62,8 +62,8 @@ local cmdLine = string.format('
 ParaGlobal.ShellExecute("open", ParaIO.GetCurDirectory(0).."cef3\\cefclient.exe", cmdLine, "", 1); 
 ```
 ### Links
+- [Cef3 wiki](https://bitbucket.org/chromiumembedded/cef/wiki/Home)
 - [NplBrowser assets](https://api.github.com/repos/tatfook/NplBrowser/releases?per_page=100)
-
 
 ![image](https://user-images.githubusercontent.com/5885941/55061101-e26efe80-50ad-11e9-94a9-edd185e880bd.png)
 

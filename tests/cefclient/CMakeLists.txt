@@ -245,6 +245,8 @@ set(CEFCLIENT_MACOSX_HELPER_SRCS
 set(CEFCLIENT_WINDOWS_SRCS
   cefclient_win.cc
   ${json_files}
+  CefClientConfig.h
+  CefClientConfig.cpp
   )
 source_group(cefclient FILES ${CEFCLIENT_WINDOWS_SRCS})
 
