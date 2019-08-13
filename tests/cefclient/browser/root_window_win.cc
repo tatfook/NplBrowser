@@ -1237,11 +1237,30 @@ void RootWindowWin::NotifyDestroyedIfDone() {
     delegate_->OnRootWindowDestroyed(this);
 }
 
+void ModifyZoom(CefRefPtr<CefBrowser> browser, double zoom) {
+    if (!CefCurrentlyOn(TID_UI)) {
+        LOG(INFO) << "Post task ModifyZoom:" << zoom;
+        // Execute on the UI thread.
+        CefPostTask(TID_UI, base::Bind(&ModifyZoom, browser, zoom));
+        return;
+    }
+    LOG(INFO) << "Run task ModifyZoom:" << zoom;
+
+    browser->GetHost()->SetZoomLevel(zoom);
+}
 
 void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 {
 	try
 	{
+        REQUIRE_MAIN_THREAD();
+        if (!CefCurrentlyOn(TID_UI)) {
+            LOG(INFO) << "cef isn't on the thread TID_UI";
+        }
+        else {
+            LOG(INFO) << "cef is on the thread TID_UI";
+        }
+
 		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
 		std::string s = (const char*)(pcds->lpData);
 		nlohmann::json input = nlohmann::json::parse(s);
@@ -1309,7 +1328,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
-                b->GetHost()->SetZoomLevel(zoom);
+                ModifyZoom(b, zoom);
+                
             }
 		}
 		else if (cmd == "ChangePosSize")
@@ -1321,8 +1341,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 			if (visible)
 			{
 				this->Show(RootWindow::ShowMode::ShowNormal);
-                b->GetHost()->SetZoomLevel(zoom);
-			}
+                ModifyZoom(b, zoom);
+            }
 			else
 			{
 				this->Hide();
@@ -1330,8 +1350,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 		}
 		else if (cmd == "Zoom")
 		{
-			b->GetHost()->SetZoomLevel(zoom);
-		}
+            ModifyZoom(b, zoom);
+        }
 		else if (cmd == "EnableWindow")
 		{
 			::EnableWindow(this->GetWindowHandle(), enabled);
@@ -1344,7 +1364,7 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
 	}
 	catch (...)
 	{
-		printf("handle custom msg failed");
+        LOG(INFO) << "handle custom msg failed";
 	}
 	
 }
