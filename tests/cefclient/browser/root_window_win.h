@@ -110,7 +110,7 @@ class RootWindowWin : public RootWindow, public BrowserWindow::Delegate {
   void NotifyDestroyedIfDone();
 
   // added by leio to handle custom message
-  void HandleCustomMsg(WPARAM wParam, LPARAM lParam);
+  void HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam);
   // After initialization all members are only accessed on the main thread.
   // Members set during initialization.
   bool with_controls_;

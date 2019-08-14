@@ -628,7 +628,7 @@ LRESULT CALLBACK RootWindowWin::RootWndProc(HWND hWnd,
       break;
 
 	case WM_COPYDATA:
-		self->HandleCustomMsg(wParam, lParam);
+		self->HandleCustomMsg(hWnd, wParam, lParam);
 		break;
   }
 
@@ -1239,63 +1239,59 @@ void RootWindowWin::NotifyDestroyedIfDone() {
 
 void ModifyZoom(CefRefPtr<CefBrowser> browser, double zoom) {
     if (!CefCurrentlyOn(TID_UI)) {
-        LOG(INFO) << "Post task ModifyZoom:" << zoom;
+        LOG(INFO) << "post task ModifyZoom to the ui thread:" << zoom;
         // Execute on the UI thread.
         CefPostTask(TID_UI, base::Bind(&ModifyZoom, browser, zoom));
         return;
     }
     double old_zoom = browser->GetHost()->GetZoomLevel();
-    LOG(INFO) << "Run task ModifyZoom:" << old_zoom << " -> " << zoom;
-
+    LOG(INFO) << "ModifyZoom on the ui thread:" << old_zoom << " -> " << zoom;
     browser->GetHost()->SetZoomLevel(zoom);
+
+    LOG(INFO) << "after ModifyZoom on the ui thread:" << browser->GetHost()->GetZoomLevel();
 }
+void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
 
-void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
-{
-	try
-	{
-        REQUIRE_MAIN_THREAD();
-        if (!CefCurrentlyOn(TID_UI)) {
-            LOG(INFO) << "cef isn't on the thread TID_UI";
-        }
-        else {
-            LOG(INFO) << "cef is on the thread TID_UI";
-        }
+    if (!rootWnd)
+    {
+        LOG(INFO) << "HandleCustomTask: rootWnd is null";
+        return;
+    }
+    std::string cmd = input["cmd"];
 
-		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
-		std::string s = (const char*)(pcds->lpData);
-		nlohmann::json input = nlohmann::json::parse(s);
-		std::string cmd = input["cmd"];
+    std::string id = input["id"];
+    std::string url = input["url"];
+    bool resize = input["resize"];
+    bool visible = input["visible"];
+    bool enabled = input["enabled"];
+    int x = input["x"];
+    int y = input["y"];
+    int width = input["width"];
+    int height = input["height"];
+    double zoom = input["zoom"];
+    std::string parent_handle_s = input["parent_handle"];
+    std::string cefclient_config_filename = input["cefclient_config_filename"];
+    std::string pid = input["pid"];
 
-		std::string id = input["id"];
-		std::string url = input["url"];
-		bool resize = input["resize"];
-		bool visible = input["visible"];
-		bool enabled = input["enabled"];
-		int x = input["x"];
-		int y = input["y"];
-		int width = input["width"];
-		int height = input["height"];
-		double zoom = input["zoom"];
-        std::string parent_handle_s = input["parent_handle"];
-        std::string cefclient_config_filename = input["cefclient_config_filename"];
-        std::string pid = input["pid"];
-        
-        std::string key = id + "_" + parent_handle_s;
+    std::string key = id + "_" + parent_handle_s;
 
-        LOG(INFO) << "handle cmd:" << cmd;
-        LOG(INFO) << "handle msg:" << input;
-        CefRefPtr<CefBrowser> b = this->GetBrowser();
-        if (cmd == "CheckCefWindow")
+    LOG(INFO) << "handle cmd:" << cmd;
+    LOG(INFO) << "handle msg:" << input;
+    CefRefPtr<CefBrowser> b = rootWnd->GetBrowser();
+    if (cmd == "CheckCefWindow")
+    {
+
+        LOG(INFO) << "CheckCefWindow:" << key;
+        if (b)
         {
-
-            LOG(INFO) << "CheckCefWindow:" << key;
-            if (b)
+            LOG(INFO) << "CheckCefWindow CefBrowser is found:" << key;
+            CefRefPtr<CefBrowserHost> browser_host = b->GetHost();
+            if (browser_host)
             {
-                LOG(INFO) << "CheckCefWindow:" << key << " is created";
+                LOG(INFO) << "CheckCefWindow CefBrowser is created:" << key;
                 bool has_browser = false;
                 LOG(INFO) << "CheckCefWindow: read value " << key;
-                CefClientConfig::GetInstance(cefclient_config_filename,pid)->ReadJsonValue(key, has_browser);
+                CefClientConfig::GetInstance(cefclient_config_filename, pid)->ReadJsonValue(key, has_browser);
                 LOG(INFO) << "before CheckCefWindow result:" << has_browser;
                 if (!has_browser)
                 {
@@ -1304,65 +1300,84 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
                     LOG(INFO) << "after CheckCefWindow result:" << has_browser;
                 }
             }
-            else {
-                LOG(INFO) << "CheckCefWindow: browser is null:" << key;
-            }
-            return;
         }
+        else {
+            LOG(INFO) << "CheckCefWindow: browser is null:" << key;
+        }
+        return;
+    }
 
-		if (!b) {
-			return;
-		}
-		if (cmd == "Start")
-		{
-			//do nothing
-		}
-		else if (cmd == "Open")
-		{
-			if (!url.empty())
-			{
-				b->GetMainFrame().get()->LoadURL(url);
-			}
-			if (resize)
-			{
-				this->SetBounds(x, y, width, height);
-			}
-			if (visible)
-			{
-				this->Show(RootWindow::ShowMode::ShowNormal);
-                ModifyZoom(b, zoom);
-                
-            }
-		}
-		else if (cmd == "ChangePosSize")
-		{
-			this->SetBounds(x, y, width, height);
-		}
-		else if (cmd == "Show")
-		{
-			if (visible)
-			{
-				this->Show(RootWindow::ShowMode::ShowNormal);
-                ModifyZoom(b, zoom);
-            }
-			else
-			{
-				this->Hide();
-			}
-		}
-		else if (cmd == "Zoom")
-		{
+    if (!b) {
+        return;
+    }
+    if (cmd == "Start")
+    {
+        //do nothing
+    }
+    else if (cmd == "Open")
+    {
+        if (!url.empty())
+        {
+            b->GetMainFrame().get()->LoadURL(url);
+        }
+        if (resize)
+        {
+            rootWnd->SetBounds(x, y, width, height);
+        }
+        if (visible)
+        {
+            rootWnd->Show(RootWindow::ShowMode::ShowNormal);
+            ModifyZoom(b, zoom);
+
+        }
+    }
+    else if (cmd == "ChangePosSize")
+    {
+        rootWnd->SetBounds(x, y, width, height);
+    }
+    else if (cmd == "Show")
+    {
+        if (visible)
+        {
+            rootWnd->Show(RootWindow::ShowMode::ShowNormal);
             ModifyZoom(b, zoom);
         }
-		else if (cmd == "EnableWindow")
-		{
-			::EnableWindow(this->GetWindowHandle(), enabled);
-		}
-		else if (cmd == "Quit")
-		{
-            this->Close(true);
+        else
+        {
+            rootWnd->Hide();
+        }
+    }
+    else if (cmd == "Zoom")
+    {
+        ModifyZoom(b, zoom);
+    }
+    else if (cmd == "EnableWindow")
+    {
+        ::EnableWindow(rootWnd->GetWindowHandle(), enabled);
+    }
+    else if (cmd == "Quit")
+    {
+        rootWnd->Close(true);
 
-		}
+    }
+}
+void RootWindowWin::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
+{
+	try
+	{
+
+        REQUIRE_MAIN_THREAD();
+
+        RootWindowWin* self = GetUserDataPtr<RootWindowWin*>(hWnd);
+        DCHECK(self);
+        DCHECK(hWnd == self->find_hwnd_);
+
+		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
+		std::string s = (const char*)(pcds->lpData);
+		nlohmann::json input = nlohmann::json::parse(s);
+        std::string cmd = input["cmd"];
+        LOG(INFO) << "post custom task on main thread:" << cmd;
+        MAIN_POST_CLOSURE(base::Bind(&HandleCustomTask, self, input));
 	}
 	catch (...)
 	{
