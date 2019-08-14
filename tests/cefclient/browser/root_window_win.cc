@@ -1244,7 +1244,8 @@ void ModifyZoom(CefRefPtr<CefBrowser> browser, double zoom) {
         CefPostTask(TID_UI, base::Bind(&ModifyZoom, browser, zoom));
         return;
     }
-    LOG(INFO) << "Run task ModifyZoom:" << zoom;
+    double old_zoom = browser->GetHost()->GetZoomLevel();
+    LOG(INFO) << "Run task ModifyZoom:" << old_zoom << " -> " << zoom;
 
     browser->GetHost()->SetZoomLevel(zoom);
 }
@@ -1282,7 +1283,8 @@ void RootWindowWin::HandleCustomMsg(WPARAM wParam, LPARAM lParam)
         
         std::string key = id + "_" + parent_handle_s;
 
-        LOG(INFO) << "handle msg:" << cmd;
+        LOG(INFO) << "handle cmd:" << cmd;
+        LOG(INFO) << "handle msg:" << input;
         CefRefPtr<CefBrowser> b = this->GetBrowser();
         if (cmd == "CheckCefWindow")
         {
