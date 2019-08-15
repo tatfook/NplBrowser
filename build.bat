@@ -1,4 +1,5 @@
 @echo off 
+rem build solution only with release type, using cmake could build both debug and release solution.
 if not exist bin ( mkdir bin )
 set build_type=Release
 pushd bin

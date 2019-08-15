@@ -1,4 +1,5 @@
 @echo off 
+rem NOTE: this logic is deprecated
 rem compress every file
 set root=%cd%
 set input=.\deps\NPLRuntime\ParaWorld\bin32\cef3\*.*
