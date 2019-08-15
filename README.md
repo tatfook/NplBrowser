@@ -1,5 +1,5 @@
 # NplBrowser
-Running chromium embedded framework(cef) brwoser in paracraft
+Running chromium embedded framework(cef) browser in paracraft
 
 ### Building with vs2017
  1. clone NplBrowser and its submodule
