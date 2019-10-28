@@ -2,11 +2,19 @@
 
 #include <tlhelp32.h>
 
+#include "INPLRuntime.h"
 #include "INPLRuntimeState.h"
+#include "IParaEngineCore.h"
+#include "IParaEngineApp.h"
+#include "IAttributeFields.h"
 #include "NPLInterface.hpp"
+
 #include "json.hpp"
+
 using namespace ParaEngine;
 using namespace nlohmann;
+
+json global_wnd_map;
 
 struct BrowserParams
 {
@@ -109,6 +117,7 @@ extern "C" {
 	CORE_EXPORT_DECL ParaEngine::ClassDescriptor* LibClassDesc(int i);
 	CORE_EXPORT_DECL void LibInit();
 	CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid);
+    CORE_EXPORT_DECL void LibInitParaEngine(ParaEngine::IParaEngineCore* pCoreInterface);
 #ifdef __cplusplus
 }   /* extern "C" */
 #endif
@@ -200,9 +209,22 @@ CORE_EXPORT_DECL ClassDescriptor* LibClassDesc(int i)
 	}
 }
 
+ParaEngine::IParaEngineCore* g_pCoreInterface = NULL;
+ParaEngine::IParaEngineCore* GetCoreInterface()
+{
+    return g_pCoreInterface;
+}
+
+CORE_EXPORT_DECL void LibInitParaEngine(IParaEngineCore* pCoreInterface)
+{
+    g_pCoreInterface = pCoreInterface;
+}
+
 CORE_EXPORT_DECL void LibInit()
 {
 }
+
+
 
 #ifdef WIN32
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, ULONG fdwReason, LPVOID lpvReserved)
@@ -252,7 +274,18 @@ DWORD FindProcessId(const char* processName)
     CloseHandle(processesSnapshot);
     return 0;
 }
-
+extern "C" {
+    void WriteLog(const char* sFormat, ...) {
+        if (GetCoreInterface() && GetCoreInterface()->GetAppInterface()) {
+            char buf_[1024 + 1];
+            va_list args;
+            va_start(args, sFormat);
+            vsnprintf(buf_, 1024, sFormat, args);
+            GetCoreInterface()->GetAppInterface()->WriteToLog(buf_);
+            va_end(args);
+        }
+    }
+}
 CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 {
 	if (nType == ParaEngine::PluginActType_STATE)
@@ -268,36 +301,32 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 		std::string callback_file = input["callback_file"];
         std::string parent_handle_s = input["parent_handle"];
         HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
-        printf("running id:%s,cmd:%s\n", id.c_str(),cmd.c_str());
+        WriteLog("running id:%s,cmd:%s\n", id.c_str(),cmd.c_str());
         std::string client_name = input["client_name"];
         client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 		id = id.empty() ? "CEFCLIENT" : id;
 		if (cmd == "Start") {
 			std::string cmdline = input["cmdline"];
-			ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
+
+            if (global_wnd_map.find(id) == global_wnd_map.end()) {
+                global_wnd_map[id] = true;
+                WriteLog("create the window:%s\n", id.c_str());
+                ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
+            }
+            else {
+                WriteLog("the window is existed:%s\n", id.c_str());
+            }
 
 		} 
-        /*else if (cmd == "CheckCefWindow")
-		{
-            DWORD pid = FindProcessId(client_name.c_str());
-            if (pid)
-            {
-                HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
-                bool bFound = false;
-                if (hwnd)
-                {
-                    bFound = true;
-                }
-
-                NPLInterface::NPLObjectProxy data;
-                data["cmd"] = cmd;
-                data["value"] = bFound;
-                data["id"] = id;
-                NPL_Activate(pState, callback_file, data);
-            }
-        }*/
 		else 
 		{
+            if (cmd == "Quit")
+            {
+                if (global_wnd_map.find(id) != global_wnd_map.end()) {
+                    global_wnd_map.erase(id);
+                    WriteLog("erase the map of window:%s\n", id.c_str());
+                }
+            }
             HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
             if (hwnd)
             {
@@ -317,6 +346,9 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
                 data["parent_handle"] = parent_handle_s;
 
                 NPL_Activate(pState, callback_file, data);
+            }
+            else {
+                WriteLog("can't find the window:%s\n", id.c_str());
             }
 
           
