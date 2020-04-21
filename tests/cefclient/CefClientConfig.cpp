@@ -91,34 +91,50 @@ namespace client
     nlohmann::json& CefClientConfig::ReadRoot()
     {
         mRoot.clear();
-        std::ifstream input_json_file(mFileName);
-        if (input_json_file.is_open())
+        try
         {
-            // read 
-            input_json_file >> mRoot;
-            input_json_file.close();
+            std::ifstream input_json_file(mFileName);
+            if (input_json_file.is_open())
+            {
+                // read 
+                input_json_file >> mRoot;
+                input_json_file.close();
+            }
+            else
+            {
+                WriteRoot(mRoot);
+                LOG(INFO) << "create empty CefClientConfig:" << mFileName;
+            }
         }
-        else
+        catch (const std::exception&)
         {
-            WriteRoot(mRoot);
-            LOG(INFO) << "create empty CefClientConfig:" << mFileName;
+
         }
+        
         LOG(INFO) << "read root:" << mRoot;
         return mRoot;
     }
 
     void CefClientConfig::WriteRoot(nlohmann::json& root)
     {
-        std::ofstream out_json_file(mFileName);
-        if (out_json_file.is_open())
+        try
         {
-            out_json_file << std::setw(4) << root << std::endl;
-            out_json_file.close();
+            std::ofstream out_json_file(mFileName);
+            if (out_json_file.is_open())
+            {
+                out_json_file << std::setw(4) << root << std::endl;
+                out_json_file.close();
+            }
+            else
+            {
+                LOG(INFO) << "can't write CefClientConfig:" << mFileName;
+            }
         }
-        else
+        catch (const std::exception&)
         {
-            LOG(INFO) << "can't write CefClientConfig:" << mFileName;
+
         }
+        
     }
 
 }
