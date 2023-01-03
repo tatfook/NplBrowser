@@ -1,6 +1,9 @@
 # NplBrowser
 Running chromium embedded framework(cef) browser in paracraft
 
+## 编译64位版本
+将cef_win64/Release/libcef.zip解压到当前目录成cef_win64/Release/libcef.dll (文件太大, git不支持)
+
 ### Building with vs2017
  1. clone NplBrowser and its submodule
 ```

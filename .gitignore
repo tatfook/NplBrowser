@@ -8,3 +8,6 @@ bin
 Debug
 sln
 build
+
+cef_win64/Release/libcef.dll
+NplBrowser.code-workspace
