@@ -10,8 +10,8 @@ set_property(GLOBAL PROPERTY OS_FOLDERS ON)
 
 set (BoostRoot_DIR "$ENV{BOOST_ROOT}")
 
-set(NPLRuntime_DIR "${PROJECT_SOURCE_DIR}/deps/NPLRuntime" CACHE STRING "")
-# set(NPLRuntime_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../NPLRuntime_win32")
+# set(NPLRuntime_DIR "${PROJECT_SOURCE_DIR}/deps/NPLRuntime" CACHE STRING "")
+set(NPLRuntime_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../NPLRuntime_win32")
 set(ParaEngineClient_SOURCE_DIR ${NPLRuntime_DIR}/Client/trunk/ParaEngineClient)
 
 # set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")

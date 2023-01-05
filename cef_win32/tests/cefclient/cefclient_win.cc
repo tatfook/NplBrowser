@@ -30,15 +30,19 @@
 #pragma comment(lib, "cef_sandbox.lib")
 #endif
 
+#include <sstream>
+#include <iostream>
+#include <vector>
+#include "tests/cefclient/CefClientConfig.h"
+using namespace std;
 namespace client {
 namespace {
 
 int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Enable High-DPI support on Windows 7 or newer.
-  CefEnableHighDPISupport();
+  //CefEnableHighDPISupport();
 
   CefMainArgs main_args(hInstance);
-
   void* sandbox_info = NULL;
 
 #if defined(CEF_USE_SANDBOX)
@@ -78,7 +82,7 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
 
   // Populate the settings based on command line arguments.
   context->PopulateSettings(&settings);
-
+  settings.multi_threaded_message_loop = true;
   // Create the main message loop object.
   scoped_ptr<MainMessageLoop> message_loop;
   if (settings.multi_threaded_message_loop)
@@ -99,9 +103,36 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   window_config.with_controls =
       !command_line->HasSwitch(switches::kHideControls);
   window_config.with_osr = settings.windowless_rendering_enabled ? true : false;
+  // set window bounds
+  if (command_line->HasSwitch("bounds"))
+  {
+	  CefString bounds_s = command_line->GetSwitchValue("bounds");
+	  std::vector<int> rect;
+	  istringstream f(bounds_s.ToString());
+	  string s;
+	  while (getline(f, s, ',')) {
+		  int v = std::stoul(s);
+		  rect.push_back(v);
+	  }
+	  if (rect.size() == 4)
+	  {
+		  CefRect window_rect(rect[0], rect[1], rect[2], rect[3]);
+		  window_config.bounds = window_rect;
+	  }
+  }
+  window_config.url = command_line->GetSwitchValue("url").ToString();
 
   // Create the first window.
   context->GetRootWindowManager()->CreateRootWindow(window_config);
+
+  std::string cefclient_config_filename = command_line->GetSwitchValue("cefclient_config_filename").ToString();
+  std::string pid = command_line->GetSwitchValue("pid").ToString();
+  std::string id = command_line->GetSwitchValue("window_name").ToString();
+  std::string parent_handle_s = command_line->GetSwitchValue("parent_handle").ToString();
+  std::string key = id + "_" + parent_handle_s;
+  LOG(INFO) << "cefclient_config_filename is:" << cefclient_config_filename;
+  LOG(INFO) << "pid is:" << pid;
+
 
   // Run the message loop. This will block until Quit() is called by the
   // RootWindowManager after all windows have been destroyed.
@@ -113,6 +144,13 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Release objects in reverse order of creation.
   message_loop.reset();
   context.reset();
+
+  //clear config
+  if (!cefclient_config_filename.empty() && !pid.empty())
+  {
+      LOG(INFO) << "erase config by pid:" << pid << " key:" << key;
+      CefClientConfig::GetInstance(cefclient_config_filename, pid)->EraseJsonValue(key);
+  }
 
   return result;
 }

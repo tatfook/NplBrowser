@@ -19,7 +19,9 @@
 #include "tests/shared/browser/main_message_loop.h"
 #include "tests/shared/browser/util_win.h"
 #include "tests/shared/common/client_switches.h"
-
+#include "tests/cefclient/browser/root_window_manager.h"
+#include "json.hpp"
+#include "tests/cefclient/CefClientConfig.h"
 #define MAX_URL_LENGTH 255
 #define BUTTON_WIDTH 72
 #define URLBAR_HEIGHT 24
@@ -321,9 +323,16 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
 
   HINSTANCE hInstance = GetModuleHandle(NULL);
 
+  CefRefPtr<CefCommandLine> command_line = CefCommandLine::GetGlobalCommandLine();
+  CefString window_title_s = command_line->GetSwitchValue("window_title");
+  CefString window_name_s = command_line->GetSwitchValue("window_name");
+  CefString parent_handle_s = command_line->GetSwitchValue("parent_handle");
   // Load strings from the resource file.
-  const std::wstring& window_title = GetResourceString(IDS_APP_TITLE);
-  const std::wstring& window_class = GetResourceString(IDC_CEFCLIENT);
+  const std::wstring& window_title = window_title_s.empty() ? GetResourceString(IDS_APP_TITLE) : window_title_s;
+  const std::wstring& window_name = window_name_s.empty() ? GetResourceString(IDC_CEFCLIENT) : window_name_s;
+  HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
+  //LOG(ERROR) << "parent_handle_s:" << parent_handle_s;
+  //LOG(ERROR) << "parent_handle:" << parent_handle;
 
   const cef_color_t background_color = MainContext::Get()->GetBackgroundColor();
   const HBRUSH background_brush = CreateSolidBrush(
@@ -331,23 +340,32 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
           CefColorGetB(background_color)));
 
   // Register the window class.
-  RegisterRootClass(hInstance, window_class, background_brush);
+  RegisterRootClass(hInstance, window_name, background_brush);
 
   // Register the message used with the find dialog.
   find_message_id_ = RegisterWindowMessage(FINDMSGSTRING);
   CHECK(find_message_id_);
 
-  CefRefPtr<CefCommandLine> command_line =
-      CefCommandLine::GetGlobalCommandLine();
+ 
   const bool no_activate = command_line->HasSwitch(switches::kNoActivate);
 
-  const DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+
+  DWORD dwStyle;
+  if (parent_handle)
+  {
+	  dwStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN;
+	  SetWindowLong(parent_handle, GWL_STYLE, GetWindowLong(parent_handle, GWL_STYLE) | WS_CLIPCHILDREN);
+  }
+  else {
+	  dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+
+  }
   DWORD dwExStyle = always_on_top_ ? WS_EX_TOPMOST : 0;
   if (no_activate) {
     // Don't activate the browser window on creation.
     dwExStyle |= WS_EX_NOACTIVATE;
   }
-
+ 
   int x, y, width, height;
   if (::IsRectEmpty(&start_rect_)) {
     // Use the default window position/size.
@@ -362,14 +380,11 @@ void RootWindowWin::CreateRootWindow(const CefBrowserSettings& settings,
     width = window_rect.right - window_rect.left;
     height = window_rect.bottom - window_rect.top;
   }
-
   browser_settings_ = settings;
-
   // Create the main window initially hidden.
-  CreateWindowEx(dwExStyle, window_class.c_str(), window_title.c_str(), dwStyle,
-                 x, y, width, height, NULL, NULL, hInstance, this);
+  CreateWindowEx(dwExStyle, window_name.c_str(), window_title.c_str(), dwStyle,
+                 x, y, width, height, parent_handle, NULL, hInstance, this);
   CHECK(hwnd_);
-
   if (!called_enable_non_client_dpi_scaling_ && IsProcessPerMonitorDpiAware()) {
     // This call gets Windows to scale the non-client area when WM_DPICHANGED
     // is fired on Windows versions < 10.0.14393.0.
@@ -611,6 +626,10 @@ LRESULT CALLBACK RootWindowWin::RootWndProc(HWND hWnd,
       self->hwnd_ = NULL;
       self->OnDestroyed();
       break;
+
+	case WM_COPYDATA:
+		self->HandleCustomMsg(hWnd, wParam, lParam);
+		break;
   }
 
   return DefWindowProc(hWnd, message, wParam, lParam);
@@ -934,6 +953,10 @@ void RootWindowWin::OnCreate(LPCREATESTRUCT lpCreateStruct) {
         }
       }
     }
+	CefRefPtr<CefCommandLine> command_line = CefCommandLine::GetGlobalCommandLine();
+	if (command_line->HasSwitch(switches::kHideTopMenu)) {
+		::SetMenu(hwnd_, NULL);
+	}
   } else {
     // No controls so also remove the default menu.
     ::SetMenu(hwnd_, NULL);
@@ -992,9 +1015,13 @@ void RootWindowWin::OnBrowserCreated(CefRefPtr<CefBrowser> browser) {
   } else {
     // Make sure the browser is sized correctly.
     OnSize(false);
+    
+
   }
 
   delegate_->OnBrowserCreated(this, browser);
+
+  
 }
 
 void RootWindowWin::OnBrowserWindowDestroyed() {
@@ -1208,6 +1235,155 @@ void RootWindowWin::NotifyDestroyedIfDone() {
   // Notify once both the window and the browser have been destroyed.
   if (window_destroyed_ && browser_destroyed_)
     delegate_->OnRootWindowDestroyed(this);
+}
+
+void ModifyZoom(CefRefPtr<CefBrowser> browser, double zoom) {
+    if (!CefCurrentlyOn(TID_UI)) {
+        LOG(INFO) << "post task ModifyZoom to the ui thread:" << zoom;
+        // Execute on the UI thread.
+        CefPostTask(TID_UI, base::Bind(&ModifyZoom, browser, zoom));
+        return;
+    }
+    double old_zoom = browser->GetHost()->GetZoomLevel();
+    LOG(INFO) << "ModifyZoom on the ui thread:" << old_zoom << " -> " << zoom;
+    browser->GetHost()->SetZoomLevel(zoom);
+
+    LOG(INFO) << "after ModifyZoom on the ui thread:" << browser->GetHost()->GetZoomLevel();
+}
+void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
+
+    if (!rootWnd)
+    {
+        LOG(INFO) << "HandleCustomTask: rootWnd is null";
+        return;
+    }
+    std::string cmd = input["cmd"];
+
+    std::string id = input["id"];
+    std::string url = input["url"];
+    bool resize = input["resize"];
+    bool visible = input["visible"];
+    bool enabled = input["enabled"];
+    int x = input["x"];
+    int y = input["y"];
+    int width = input["width"];
+    int height = input["height"];
+    double zoom = input["zoom"];
+    std::string parent_handle_s = input["parent_handle"];
+    std::string cefclient_config_filename = input["cefclient_config_filename"];
+    std::string pid = input["pid"];
+
+    std::string key = id + "_" + parent_handle_s;
+
+    LOG(INFO) << "handle cmd:" << cmd;
+    LOG(INFO) << "handle msg:" << input;
+    CefRefPtr<CefBrowser> b = rootWnd->GetBrowser();
+    if (cmd == "CheckCefWindow")
+    {
+
+        LOG(INFO) << "CheckCefWindow:" << key;
+        if (b)
+        {
+            LOG(INFO) << "CheckCefWindow CefBrowser is found:" << key;
+            CefRefPtr<CefBrowserHost> browser_host = b->GetHost();
+            if (browser_host)
+            {
+                LOG(INFO) << "CheckCefWindow CefBrowser is created:" << key;
+                bool has_browser = false;
+                LOG(INFO) << "CheckCefWindow: read value " << key;
+                CefClientConfig::GetInstance(cefclient_config_filename, pid)->ReadJsonValue(key, has_browser);
+                LOG(INFO) << "before CheckCefWindow result:" << has_browser;
+                if (!has_browser)
+                {
+                    has_browser = true;
+                    CefClientConfig::GetInstance(cefclient_config_filename, pid)->WriteJsonValue(key, true);
+                    LOG(INFO) << "after CheckCefWindow result:" << has_browser;
+                }
+            }
+        }
+        else {
+            LOG(INFO) << "CheckCefWindow: browser is null:" << key;
+        }
+        return;
+    }
+
+    if (!b) {
+        return;
+    }
+    if (cmd == "Start")
+    {
+        //do nothing
+    }
+    else if (cmd == "Open")
+    {
+        if (!url.empty())
+        {
+            b->GetMainFrame().get()->LoadURL(url);
+        }
+        if (resize)
+        {
+            rootWnd->SetBounds(x, y, width, height);
+        }
+        if (visible)
+        {
+            rootWnd->Show(RootWindow::ShowMode::ShowNormal);
+            ModifyZoom(b, zoom);
+
+        }
+    }
+    else if (cmd == "ChangePosSize")
+    {
+        rootWnd->SetBounds(x, y, width, height);
+    }
+    else if (cmd == "Show")
+    {
+        if (visible)
+        {
+            rootWnd->Show(RootWindow::ShowMode::ShowNormal);
+            ModifyZoom(b, zoom);
+        }
+        else
+        {
+            rootWnd->Hide();
+        }
+    }
+    else if (cmd == "Zoom")
+    {
+        ModifyZoom(b, zoom);
+    }
+    else if (cmd == "EnableWindow")
+    {
+        ::EnableWindow(rootWnd->GetWindowHandle(), enabled);
+    }
+    else if (cmd == "Quit")
+    {
+        rootWnd->Close(true);
+
+    }
+}
+void RootWindowWin::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
+{
+	try
+	{
+
+        REQUIRE_MAIN_THREAD();
+
+        RootWindowWin* self = GetUserDataPtr<RootWindowWin*>(hWnd);
+        DCHECK(self);
+        DCHECK(hWnd == self->find_hwnd_);
+
+		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
+		std::string s = (const char*)(pcds->lpData);
+		nlohmann::json input = nlohmann::json::parse(s);
+        std::string cmd = input["cmd"];
+        LOG(INFO) << "post custom task on main thread:" << cmd;
+        MAIN_POST_CLOSURE(base::Bind(&HandleCustomTask, self, input));
+	}
+	catch (...)
+	{
+        LOG(INFO) << "handle custom msg failed";
+	}
+	
 }
 
 }  // namespace client

@@ -81,6 +81,7 @@ class RootWindowManager : public RootWindow::Delegate {
     return request_context_per_browser_;
   }
 
+
  private:
   // Allow deletion via scoped_ptr only.
   friend struct base::DefaultDeleter<RootWindowManager>;

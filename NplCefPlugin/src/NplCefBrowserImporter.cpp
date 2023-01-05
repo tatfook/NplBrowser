@@ -310,7 +310,7 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 
             if (global_wnd_map.find(id) == global_wnd_map.end()) {
                 global_wnd_map[id] = true;
-                WriteLog("create the window:%s\n", id.c_str());
+                WriteLog("create the window:%s\ncmdline:%s\n", id.c_str(), cmdline.c_str());
                 ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
             }
             else {
