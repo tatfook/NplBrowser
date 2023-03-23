@@ -23,7 +23,7 @@
 #include "tests/shared/browser/extension_util.h"
 #include "tests/shared/browser/resource_util.h"
 #include "tests/shared/common/client_switches.h"
-
+#include "tests/cefclient/cefclient_to_npl.h"
 namespace client {
 
 #if defined(OS_WIN)
@@ -401,7 +401,19 @@ bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
                                      const CefString& source,
                                      int line) {
   CEF_REQUIRE_UI_THREAD();
-
+  
+  std::string strMessage = message.ToString();
+  if (strMessage != "" && strMessage.find("paracraft:",0) == 0)
+  {
+	  LOG(INFO) << "receve=====，用于传递数据从js到C++";
+	  bool bResolve = CefClientToNpl::GetInstance()->ResolveMessageFromJs(strMessage);
+	  if (bResolve)
+	  {
+		  LOG(INFO) << "解析成功"<< strMessage;
+	  }
+	  LOG(INFO) << "OnConsoleMessage return" << strMessage;
+	  return true;
+  }
   FILE* file = fopen(console_log_file_.c_str(), "a");
   if (file) {
     std::stringstream ss;
@@ -428,7 +440,6 @@ bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
        << NEWLINE << "-----------------------" << NEWLINE;
     fputs(ss.str().c_str(), file);
     fclose(file);
-
     if (first_console_message_) {
       test_runner::Alert(
           browser, "Console messages written to \"" + console_log_file_ + "\"");
@@ -662,6 +673,15 @@ bool ClientHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                    bool is_redirect) {
   CEF_REQUIRE_UI_THREAD();
 
+  std::string strUrl = request->GetURL();
+  if (strUrl != "" && strUrl.find("paracraft://sendMsg") == 0)
+  {
+	  //找到了以paracraft://sendMsg开头的url导航，把整个字符串发送到npl端处理
+	  LOG(INFO) << "OnBeforeBrowse url= sned========" << strUrl;
+
+	  CefClientToNpl::GetInstance()->SendMessageToWindow(strUrl);
+	  return true;
+  }
   message_router_->OnBeforeBrowse(browser, frame);
   return false;
 }
