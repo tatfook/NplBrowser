@@ -1259,23 +1259,22 @@ void CallJavaScriptFunc(CefRefPtr<CefBrowser> browser, std::string strFile, std:
 	CefRefPtr<CefFrame> cefFrame = browser->GetMainFrame();
 	if (cefFrame)
 	{
-		std::string strJsCode = "ActivateJsFunction(\"";
+		std::string strJsCode = "ActivateJsFunction(\'";
 		strJsCode += strFile;
-		strJsCode += "\",\"";
+		strJsCode += "\',\'";
 		strJsCode += strParams;
-		strJsCode += "\")";
+		strJsCode += "\')";
+		LOG(INFO) << "JS func"<< strJsCode ;
 		cefFrame->ExecuteJavaScript(CefString(strJsCode), cefFrame->GetURL(), 0);
 	}
 }
 
 void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
-	LOG(INFO) << "HandleCustomTask====================";
     if (!rootWnd)
     {
         LOG(INFO) << "HandleCustomTask: rootWnd is null";
         return;
     }
-	LOG(INFO) << "HandleCustomTask====================1";
     std::string cmd = input["cmd"];
 
     std::string id = input["id"];
@@ -1285,16 +1284,12 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     bool enabled = input["enabled"];
     int x = input["x"];
     int y = input["y"];
-	LOG(INFO) << "HandleCustomTask====================2";
     int width = input["width"];
     int height = input["height"];
     double zoom = input["zoom"];
     std::string parent_handle_s = input["parent_handle"];
     std::string cefclient_config_filename = input["cefclient_config_filename"];
     std::string pid = input["pid"];
-	LOG(INFO) << "HandleCustomTask====================3";
-	//std::string machine_code = input["machine_code"];
-	LOG(INFO) << "HandleCustomTask====================4";
     std::string key = id + "_" + parent_handle_s;
 
 
@@ -1390,11 +1385,16 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     {
         rootWnd->Close(true);
     }
-	else if (cmd == "CallJsFunc")
+	else if (cmd == "CallJsFunc") //CallJsFunc
 	{
-		std::string jsFile = input["file"];
-		std::string jsParams = input["params"];
-		CallJavaScriptFunc(b, jsFile, jsParams);
+		std::string message_content = input["message_content"];
+		if (json::accept(message_content))
+		{
+			json jsContent = json::parse(message_content);
+			std::string jsFile = jsContent["file"];
+			std::string jsParams = jsContent["params"];
+			CallJavaScriptFunc(b, jsFile, jsParams);
+		}
 	}
 }
 

@@ -55,7 +55,7 @@ NplMessageWindow::~NplMessageWindow()
 void NplMessageWindow::createWindow()
 {
 	WNDCLASS messageClass{ 0 };
-	string str1 = "NplMessageWindow";
+	string str1 = "MessageWindow";
 	str1 += m_strHandle;
 	messageClass.lpszClassName = str1.c_str();
 	messageClass.lpfnWndProc = NplMessageWindowProc;

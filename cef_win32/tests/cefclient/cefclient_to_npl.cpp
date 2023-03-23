@@ -95,7 +95,7 @@ void CefClientToNpl::SendMessageByWindow(std::string strMessage)
 	std::string strName = "MessageWindow";
 	strName += m_strHandle;
 	std::wstring wStrName = CharToWchar(strName.c_str());
-	LOG(INFO) << "SendMessageToWindow Find the paracraft : " << strName;
+	LOG(INFO) << "SendMessageToWindow Find the paracraft : " << strName << wStrName;
 	if (!m_pHwnd)
 	{
 		m_pHwnd = FindWindow(wStrName.c_str(), wStrName.c_str());
