@@ -22,10 +22,11 @@
 #include "tests/cefclient/browser/root_window_manager.h"
 #include "json.hpp"
 #include "tests/cefclient/CefClientConfig.h"
+#include "tests/cefclient/cefclient_to_npl.h"
 #define MAX_URL_LENGTH 255
 #define BUTTON_WIDTH 72
 #define URLBAR_HEIGHT 24
-
+static bool bFirstInit = false;
 namespace client {
 
 namespace {
@@ -134,6 +135,7 @@ RootWindowWin::RootWindowWin()
 
   // Create a HRGN representing the draggable window area.
   draggable_region_ = ::CreateRectRgn(0, 0, 0, 0);
+  bFirstInit = false;
 }
 
 RootWindowWin::~RootWindowWin() {
@@ -141,7 +143,7 @@ RootWindowWin::~RootWindowWin() {
 
   ::DeleteObject(draggable_region_);
   ::DeleteObject(font_);
-
+  bFirstInit = false;
   // The window and browser should already have been destroyed.
   DCHECK(window_destroyed_);
   DCHECK(browser_destroyed_);
@@ -167,7 +169,7 @@ void RootWindowWin::Init(RootWindow::Delegate* delegate,
   CreateBrowserWindow(config.url);
 
   initialized_ = true;
-
+  bFirstInit = false;
   // Create the native root window on the main thread.
   if (CURRENTLY_ON_MAIN_THREAD()) {
     CreateRootWindow(settings, config.initially_hidden);
@@ -1250,13 +1252,30 @@ void ModifyZoom(CefRefPtr<CefBrowser> browser, double zoom) {
 
     LOG(INFO) << "after ModifyZoom on the ui thread:" << browser->GetHost()->GetZoomLevel();
 }
-void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
 
+void CallJavaScriptFunc(CefRefPtr<CefBrowser> browser, std::string strFile, std::string strParams) {
+	if (!browser)
+		return;
+	CefRefPtr<CefFrame> cefFrame = browser->GetMainFrame();
+	if (cefFrame)
+	{
+		std::string strJsCode = "ActivateJsFunction(\"";
+		strJsCode += strFile;
+		strJsCode += "\",\"";
+		strJsCode += strParams;
+		strJsCode += "\")";
+		cefFrame->ExecuteJavaScript(CefString(strJsCode), cefFrame->GetURL(), 0);
+	}
+}
+
+void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
+	LOG(INFO) << "HandleCustomTask====================";
     if (!rootWnd)
     {
         LOG(INFO) << "HandleCustomTask: rootWnd is null";
         return;
     }
+	LOG(INFO) << "HandleCustomTask====================1";
     std::string cmd = input["cmd"];
 
     std::string id = input["id"];
@@ -1266,17 +1285,28 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     bool enabled = input["enabled"];
     int x = input["x"];
     int y = input["y"];
+	LOG(INFO) << "HandleCustomTask====================2";
     int width = input["width"];
     int height = input["height"];
     double zoom = input["zoom"];
     std::string parent_handle_s = input["parent_handle"];
     std::string cefclient_config_filename = input["cefclient_config_filename"];
     std::string pid = input["pid"];
-
+	LOG(INFO) << "HandleCustomTask====================3";
+	//std::string machine_code = input["machine_code"];
+	LOG(INFO) << "HandleCustomTask====================4";
     std::string key = id + "_" + parent_handle_s;
+
 
     LOG(INFO) << "handle cmd:" << cmd;
     LOG(INFO) << "handle msg:" << input;
+
+	if (!bFirstInit)
+	{
+		LOG(INFO) << "handle first cmd:" << cmd;
+		CefClientToNpl::GetInstance()->SetParentHandle(parent_handle_s);
+		bFirstInit = true;
+	}
     CefRefPtr<CefBrowser> b = rootWnd->GetBrowser();
     if (cmd == "CheckCefWindow")
     {
@@ -1310,6 +1340,7 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     if (!b) {
         return;
     }
+	LOG(INFO) << " command is ============"<< cmd;
     if (cmd == "Start")
     {
         //do nothing
@@ -1358,20 +1389,25 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     else if (cmd == "Quit")
     {
         rootWnd->Close(true);
-
     }
+	else if (cmd == "CallJsFunc")
+	{
+		std::string jsFile = input["file"];
+		std::string jsParams = input["params"];
+		CallJavaScriptFunc(b, jsFile, jsParams);
+	}
 }
+
+
 void RootWindowWin::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
 {
 	try
 	{
 
         REQUIRE_MAIN_THREAD();
-
         RootWindowWin* self = GetUserDataPtr<RootWindowWin*>(hWnd);
         DCHECK(self);
-        DCHECK(hWnd == self->find_hwnd_);
-
+        DCHECK(hWnd == self->find_hwnd_);//这个地方debug会检测失败
 		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
 		std::string s = (const char*)(pcds->lpData);
 		nlohmann::json input = nlohmann::json::parse(s);

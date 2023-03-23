@@ -248,6 +248,8 @@ set(CEFCLIENT_WINDOWS_SRCS
   ${json_files}
   CefClientConfig.h
   CefClientConfig.cpp
+  cefclient_to_npl.h
+  cefclient_to_npl.cpp
   )
 source_group(cefclient FILES ${CEFCLIENT_WINDOWS_SRCS})
 
@@ -385,6 +387,15 @@ set(CEFCLIENT_RESOURCES_SRCS
   ${CEFCLIENT_RESOURCES_SHARED_RESOURCES_SRCS}
   )
 
+include_directories("${PROJECT_SOURCE_DIR}")
+include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${ParaEngineClient_SOURCE_DIR}")
+include_directories("${ParaEngineClient_SOURCE_DIR}/Core")
+include_directories("${ParaEngineClient_SOURCE_DIR}/math")
+include_directories("${ParaEngineClient_SOURCE_DIR}/util")
+include_directories("${ParaEngineClient_SOURCE_DIR}/renderer")
+include_directories("${ParaEngineClient_SOURCE_DIR}/IO")
+include_directories("${BoostRoot_DIR}")
 include_directories("${CEF_JSON_ROOT}/json")
 
 #

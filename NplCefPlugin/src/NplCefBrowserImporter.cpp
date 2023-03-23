@@ -1,43 +1,12 @@
-#include "stdafx.h"
 
-#include <tlhelp32.h>
-
-#include "INPLRuntime.h"
-#include "INPLRuntimeState.h"
-#include "IParaEngineCore.h"
-#include "IParaEngineApp.h"
-#include "IAttributeFields.h"
-#include "NPLInterface.hpp"
-
-#include "json.hpp"
+#include "MessageWindow.h"
 
 using namespace ParaEngine;
 using namespace nlohmann;
 
 json global_wnd_map;
-
-struct BrowserParams
-{
-	std::string cmd;
-    std::string callback_file;
-    std::string cmdline;
-	std::string client_name;
-	std::string parent_handle;
-    std::string cefclient_config_filename;
-    std::string pid; //process id
-    std::string id;
-    std::string url;
-	int x = 0;
-	int y = 0;
-	int width = 800;
-	int height = 600;
-	bool visible = true;
-	bool resize = true;
-	bool enabled = true;
-	double zoom = 0.0;
-
-    
-};
+MessageWindow* m_pMessage;
+static NPL::INPLRuntimeState* m_pStaticState;
 json ToJson(BrowserParams p)
 {
 	json out;
@@ -58,6 +27,7 @@ json ToJson(BrowserParams p)
 	out["resize"] = p.resize;
 	out["enabled"] = p.enabled;
 	out["zoom"] = p.zoom;
+	out["message_content"] = p.message_content;
 	return out;
 }
 json Read(NPLInterface::NPLObjectProxy tabMsg)
@@ -85,7 +55,7 @@ json Read(NPLInterface::NPLObjectProxy tabMsg)
 	params.width = width;
 	params.height = height;
 	params.zoom = zoom;
-
+	params.message_content = tabMsg["message_content"];
 	return ToJson(params);
 }
 void NPL_Activate(NPL::INPLRuntimeState* pState, std::string activateFile, NPLInterface::NPLObjectProxy& data) {
@@ -285,32 +255,66 @@ extern "C" {
             va_end(args);
         }
     }
+
+	void SendMessageToNpl(std::string callback_file, NPLInterface::NPLObjectProxy data)
+	{
+		NPL_Activate(m_pStaticState, callback_file, data);
+	}
+
 }
+
+void CreateMessageWindow(std::string strHandle)
+{	
+	m_pMessage = new MessageWindow(strHandle);
+	m_pMessage->createWindow();
+	/*HWND hwnd = m_pMessage->createWindow();
+	if (hwnd)
+	{
+		WriteLog("create message window success,name====%s \n", m_pMessage->strWindowName.c_str());
+		WriteLog("CreateMessageWindowdddddddddddddddddd \n");
+	}*/
+	/*HANDLE hPipe = m_pMessage->createNamedPipe();
+	if (hPipe)
+	{
+		WriteLog("create message hPipe success,name====%s \n", m_pMessage->strWindowName.c_str());
+		WriteLog("CreateMessage Pipe ============= \n");
+	}*/
+}
+
+//从npl端传入的消息
 CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 {
 	if (nType == ParaEngine::PluginActType_STATE)
 	{
 		NPL::INPLRuntimeState* pState = (NPL::INPLRuntimeState*)pVoid;
+		if (pState and m_pStaticState != pState)
+		{
+			m_pStaticState = pState;
+		}
 		const char* sMsg = pState->GetCurrentMsg();
 		int nMsgLength = pState->GetCurrentMsgLength();
-
+		WriteLog("LibActivate===============================================\n");
+		WriteLog("%s\n", sMsg);
+		WriteLog("LibActivate===============================================\n");
 		NPLInterface::NPLObjectProxy tabMsg = NPLInterface::NPLHelper::MsgStringToNPLTable(sMsg);
 		json input = Read(tabMsg);
 		std::string id = input["id"];
 		std::string cmd = input["cmd"];
+		input["message_to"] = "browser";
 		std::string callback_file = input["callback_file"];
         std::string parent_handle_s = input["parent_handle"];
         HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
-        WriteLog("running id:%s,cmd:%s\n", id.c_str(),cmd.c_str());
         std::string client_name = input["client_name"];
         client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 		id = id.empty() ? "CEFCLIENT" : id;
+
+
 		if (cmd == "Start") {
 			std::string cmdline = input["cmdline"];
-
             if (global_wnd_map.find(id) == global_wnd_map.end()) {
+				
+				CreateMessageWindow(parent_handle_s);//创建隐藏窗口收发数据
                 global_wnd_map[id] = true;
-                WriteLog("create the window:%s\ncmdline:%s\n", id.c_str(), cmdline.c_str());
                 ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
             }
             else {
@@ -327,32 +331,49 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
                     WriteLog("erase the map of window:%s\n", id.c_str());
                 }
             }
-            HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
-            if (hwnd)
-            {
-                std::string json_str = input.dump();
-                LPSTR s = const_cast<char*>(json_str.c_str());
-                strcpy(s, input.dump().c_str());
-                COPYDATASTRUCT MyCDS;
-                MyCDS.dwData = 1; // function identifierz
-                MyCDS.cbData = strnlen(s, 4096) + 1; // size of data
-                MyCDS.lpData = s;           // data structure
+			HWND hwnd = FindWindowEx(parent_handle, NULL, id.c_str(), NULL);
+			if (hwnd)
+			{
+				std::string json_str = input.dump();
+				COPYDATASTRUCT MyCDS;
+				MyCDS.dwData = 1; // function identifierz
+				MyCDS.cbData = json_str.size() + 1; // size of data
+				MyCDS.lpData = &(json_str[0]);
 
-                SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
+				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
+				NPLInterface::NPLObjectProxy data;
+				data["cmd"] = cmd;
+				data["id"] = id;
+				data["parent_handle"] = parent_handle_s;
 
-                NPLInterface::NPLObjectProxy data;
-                data["cmd"] = cmd;
-                data["id"] = id;
-                data["parent_handle"] = parent_handle_s;
-
-                NPL_Activate(pState, callback_file, data);
-            }
-            else {
-                WriteLog("can't find the window:%s\n", id.c_str());
-            }
-
-          
+				NPL_Activate(pState, callback_file, data);
+			}
+			else {
+				WriteLog("can't find the window:%s\n", id.c_str());
+			}
 			
+			//消息窗口 ,这个不走MessageWindow
+			//std::string str1 = "MessageWindow";
+			//str1 += parent_handle_s;
+			//HWND hMWnd = FindWindow(str1.c_str(), str1.c_str());
+			//if (hMWnd)
+			//{
+			//	std::string json_str = input.dump();
+			//	COPYDATASTRUCT MyCDS;
+			//	MyCDS.dwData = 1; // function identifierz
+			//	MyCDS.cbData = json_str.size() + 1; // size of data
+			//	MyCDS.lpData = &(json_str[0]);
+			//	SendMessage(hMWnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
+			//}
+
+			//保证消息已经发送完毕
+			/************************************************************************/
+			/* if (m_pMessage && cmd == "Quit")
+			{
+				delete m_pMessage;
+				m_pMessage = nullptr;
+			}                                                                     */
+			/************************************************************************/
 		}
 
 		
