@@ -30,7 +30,6 @@ CefClientToNpl* CefClientToNpl::m_pInstance = nullptr;
 CefClientToNpl::CefClientToNpl()
 {
 	m_pHwnd = nullptr;
-	LOG(INFO) << "CefClientToNpl:CefClientToNpl========11111===";
 }
 
 CefClientToNpl::~CefClientToNpl()
@@ -64,7 +63,6 @@ void createWindow(){}
 void CefClientToNpl::SendMessageToWindow(std::string strMessage)
 {
 	this->SendMessageByWindow(strMessage);
-	//this->SendMessageByPipe(strMessage);
 }
 
 bool CefClientToNpl::ResolveMessageFromJs(std::string strMessage)
@@ -113,10 +111,6 @@ void CefClientToNpl::SendMessageByWindow(std::string strMessage)
 		MyCDS.lpData = &(json_str[0]);           // data structure
 		LOG(INFO) << "SendMessageToWindow Find the window2 : " << json_str.c_str();
 		LRESULT re = SendMessage(m_pHwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
-		/*if (!re) {
-		LOG(INFO) << "SendMessageToWindow failed : " << strName;
-		}*/
-		//LRESULT re = SendMessageTimeout(m_pHwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS, SMTO_ABORTIFHUNG, 2000, NULL);
 		if (re == 0)
 		{
 			LOG(INFO) << "SendMessageToWindow failed : " << strName << strMessage;
@@ -125,51 +119,11 @@ void CefClientToNpl::SendMessageByWindow(std::string strMessage)
 		{
 			LOG(INFO) << "SendMessageToWindow success : " << strName;
 		}
-		LOG(INFO) << "SendMessageToWindow Find the window3 : " << strName << strMessage;
-	}
-}
-
-#define BUF_SIZE 327680
-void CefClientToNpl::SendMessageByPipe(std::string strMessage)
-{
-	json message = GenerateMessage(strMessage);
-	std::string strName = "MessageWindow";
-	strName += m_strHandle;
-	strName = "\\\\.\\Pipe\\mypipe";
-	std::wstring wStrName = CharToWchar(strName.c_str());
-	DWORD num_rcv; //实际接收到的字节数
-	if (::WaitNamedPipe(wStrName.c_str(), NMPWAIT_WAIT_FOREVER))
-	{
-		if (!m_pNamedPipe)
-		{
-			m_pNamedPipe = ::CreateFile(wStrName.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-		}
-		if (m_pNamedPipe == INVALID_HANDLE_VALUE)
-		{
-			LOG(INFO) << "Failed to open the appointed named pipe!Error code: " << ::GetLastError();
-		}
-		else
-		{
-			if (::WriteFile(m_pNamedPipe, strMessage.c_str(), BUF_SIZE, &num_rcv, nullptr))
-			{
-				LOG(INFO) << "Message sent successfully...\n";
-			}
-			else
-			{
-				LOG(INFO) << "Failed to send message!Error code: " << ::GetLastError();
-			}
-		}
 	}
 }
 
 void CefClientToNpl::CloseLink()
 {
-	if (m_pNamedPipe)
-	{
-		CloseHandle(m_pNamedPipe);
-		delete m_pNamedPipe;
-		m_pNamedPipe = nullptr;
-	}
 	if (m_pHwnd)
 	{
 		delete m_pHwnd;

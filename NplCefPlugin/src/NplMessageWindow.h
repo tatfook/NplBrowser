@@ -38,20 +38,18 @@ struct BrowserParams
 	std::string message_to;
 };
 
-class MessageWindow
+class NplMessageWindow
 {
 public:
-	MessageWindow(std::string strHandle);
-	~MessageWindow();
+	NplMessageWindow(std::string strHandle);
+	~NplMessageWindow();
 	void createWindow();
 	void createWindowThread();
 	static void HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam);
-	HANDLE createNamedPipe();
 	std::string strWindowName;
 private:
 	//windowœ‡πÿ
 	HWND m_hwnd;
-	HANDLE m_pNamedPipe;
 	std::string m_strHandle;
 	void closeWindow();
 };
