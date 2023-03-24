@@ -16,12 +16,10 @@ public:
 	bool ResolveMessageFromJs(std::string strMessage);
 	void SetParentHandle(std::string strHandle);
 	void SendMessageByWindow(std::string strMessage);
-	void SendMessageByPipe(std::string strMessage);
 	void CloseLink();
 private:
 	static CefClientToNpl* m_pInstance;
 	std::string m_strHandle;
 	HWND m_pHwnd;
-	HANDLE m_pNamedPipe;
 };
 
