@@ -14,7 +14,6 @@
 #include <windows.h>
 #include "json.hpp"
 
-//这个是
 struct BrowserParams
 {
 	std::string cmd;
@@ -48,7 +47,6 @@ public:
 	static void HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam);
 	std::string strWindowName;
 private:
-	//window相关
 	HWND m_hwnd;
 	std::string m_strHandle;
 	void closeWindow();

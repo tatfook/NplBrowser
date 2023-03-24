@@ -69,18 +69,14 @@ bool CefClientToNpl::ResolveMessageFromJs(std::string strMessage)
 {
 	if (strMessage != "" && strMessage.find("paracraft:",0) == 0)
 	{
-		LOG(INFO) << "ResolveMessageFromJs Find the paracraft";
 		std::string strJs = strMessage.replace(0,10,"paracraft:");
 		if (strJs != "")
 		{
-			LOG(INFO) << "ResolveMessageFromJs send message";
 			this->SendMessageToWindow(strJs);
 			return true;
 		}
-		LOG(INFO) << "ResolveMessageFromJs send message fail";
 		return false;
 	}
-	LOG(INFO) << "ResolveMessageFromJs send message fail1";
 	return false;
 }
 
@@ -95,25 +91,23 @@ void CefClientToNpl::SendMessageByWindow(std::string strMessage)
 	std::string strName = "MessageWindow";
 	strName += m_strHandle;
 	std::wstring wStrName = CharToWchar(strName.c_str());
-	LOG(INFO) << "SendMessageToWindow Find the paracraft : " << strName << wStrName;
 	if (!m_pHwnd)
 	{
+		LOG(INFO) << "SendMessageToWindow Find the message window " << strName ;
 		m_pHwnd = FindWindow(wStrName.c_str(), wStrName.c_str());
 	}
 	if (m_pHwnd && IsWindow(m_pHwnd))
 	{
-		LOG(INFO) << "SendMessageToWindow Find the window : " << strName;
 		std::string json_str = message.dump();
 
 		COPYDATASTRUCT MyCDS;
 		MyCDS.dwData = 1; // function identifierz
 		MyCDS.cbData = json_str.size() + 1; // size of data
 		MyCDS.lpData = &(json_str[0]);           // data structure
-		LOG(INFO) << "SendMessageToWindow Find the window2 : " << json_str.c_str();
 		LRESULT re = SendMessage(m_pHwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
 		if (re == 0)
 		{
-			LOG(INFO) << "SendMessageToWindow failed : " << strName << strMessage;
+			LOG(INFO) << "SendMessageToWindow failed : " << strName;
 		}
 		else
 		{

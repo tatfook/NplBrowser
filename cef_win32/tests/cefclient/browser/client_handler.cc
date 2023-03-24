@@ -405,13 +405,11 @@ bool ClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
   std::string strMessage = message.ToString();
   if (strMessage != "" && strMessage.find("paracraft:",0) == 0)
   {
-	  LOG(INFO) << "receve=====，用于传递数据从js到C++";
 	  bool bResolve = CefClientToNpl::GetInstance()->ResolveMessageFromJs(strMessage);
 	  if (bResolve)
 	  {
-		  LOG(INFO) << "解析成功"<< strMessage;
+		  LOG(INFO) << "resolve log success"<< strMessage;
 	  }
-	  LOG(INFO) << "OnConsoleMessage return" << strMessage;
 	  return true;
   }
   FILE* file = fopen(console_log_file_.c_str(), "a");
@@ -676,9 +674,6 @@ bool ClientHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   std::string strUrl = request->GetURL();
   if (strUrl != "" && strUrl.find("paracraft://sendMsg") == 0)
   {
-	  //找到了以paracraft://sendMsg开头的url导航，把整个字符串发送到npl端处理
-	  LOG(INFO) << "OnBeforeBrowse url= sned========" << strUrl;
-
 	  CefClientToNpl::GetInstance()->SendMessageToWindow(strUrl);
 	  return true;
   }

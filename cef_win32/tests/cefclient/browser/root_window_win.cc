@@ -1335,7 +1335,6 @@ void HandleCustomTask(RootWindowWin* rootWnd, nlohmann::json input) {
     if (!b) {
         return;
     }
-	LOG(INFO) << " command is ============"<< cmd;
     if (cmd == "Start")
     {
         //do nothing
@@ -1407,7 +1406,7 @@ void RootWindowWin::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
         REQUIRE_MAIN_THREAD();
         RootWindowWin* self = GetUserDataPtr<RootWindowWin*>(hWnd);
         DCHECK(self);
-        DCHECK(hWnd == self->find_hwnd_);//这个地方debug会检测失败
+        DCHECK(hWnd == self->find_hwnd_);//debug is check error
 		COPYDATASTRUCT* pcds = (COPYDATASTRUCT*)lParam;
 		std::string s = (const char*)(pcds->lpData);
 		nlohmann::json input = nlohmann::json::parse(s);

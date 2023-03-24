@@ -265,11 +265,11 @@ extern "C" {
 
 void CreateMessageWindow(std::string strHandle)
 {	
+
 	m_pMessage = new NplMessageWindow(strHandle);
-	m_pMessage->createWindowThread();//创建一个在其他线程上的窗口
+	m_pMessage->createWindowThread();
 }
 
-//从npl端传入的消息
 CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 {
 	if (nType == ParaEngine::PluginActType_STATE)
@@ -298,7 +298,7 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 			std::string cmdline = input["cmdline"];
             if (global_wnd_map.find(id) == global_wnd_map.end()) {
 				
-				CreateMessageWindow(parent_handle_s);//创建隐藏窗口收发数据
+				CreateMessageWindow(parent_handle_s);
                 global_wnd_map[id] = true;
                 ShellExecute(NULL, "open", client_name.c_str(), cmdline.c_str(), NULL, SW_SHOWDEFAULT);
             }
@@ -324,7 +324,7 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 				MyCDS.dwData = 1; // function identifierz
 				MyCDS.cbData = json_str.size() + 1; // size of data
 				MyCDS.lpData = &(json_str[0]);
-
+				WriteLog("sendmsg to the window:%s\n", json_str.c_str());
 				SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)(LPVOID)& MyCDS);
 				NPLInterface::NPLObjectProxy data;
 				data["cmd"] = cmd;
@@ -336,16 +336,6 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 			else {
 				WriteLog("can't find the window:%s\n", id.c_str());
 			}
-			
-
-			//保证消息已经发送完毕
-			/************************************************************************/
-			/* if (m_pMessage && cmd == "Quit")
-			{
-				delete m_pMessage;
-				m_pMessage = nullptr;
-			}                                                                     */
-			/************************************************************************/
 		}
 
 		
