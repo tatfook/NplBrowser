@@ -93,7 +93,7 @@ void CefClientToNpl::SendMessageByWindow(std::string strMessage)
 	std::wstring wStrName = CharToWchar(strName.c_str());
 	if (!m_pHwnd)
 	{
-		LOG(INFO) << "SendMessageToWindow Find the message window " << strName ;
+		LOG(INFO) << "SendMessageToWindow Find the message window " << strName << strMessage;
 		m_pHwnd = FindWindow(wStrName.c_str(), wStrName.c_str());
 	}
 	if (m_pHwnd && IsWindow(m_pHwnd))

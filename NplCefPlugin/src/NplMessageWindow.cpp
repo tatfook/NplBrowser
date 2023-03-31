@@ -98,6 +98,29 @@ void NplMessageWindow::createWindowThread()
 	trMessage.detach();
 }
 
+std::string GetMessageFile(std::string strMessage) {
+	std::string strTemp = strMessage;
+	std::string navigateionStr = "paracraft://sendMsg?";
+	if (strTemp.find(navigateionStr) != strTemp.npos)
+	{
+		strTemp = strTemp.replace(strTemp.find(navigateionStr), navigateionStr.length(), "");
+		if (json::accept(strTemp))
+		{
+			json jData = json::parse(strTemp);
+			try
+			{
+				std::string callFile = jData["filename"];
+				return callFile;
+			}
+			catch (const std::exception&)
+			{
+				WriteLog("call file isNull");
+			}			
+		}
+	}
+	return "";
+
+}
 
 void NplMessageWindow::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
 {
@@ -106,13 +129,15 @@ void NplMessageWindow::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
 	json input = nlohmann::json::parse(s);
 	string message_to = input["message_to"];
 	string message_content = input["message_content"];
-
+	std::string callFile1 = GetMessageFile(message_content);
 	if (message_to == "npl")
 	{
 		std::string defaultStr = "test message window";
 		NPLInterface::NPLObjectProxy data;
 		data["otherMsg"] = message_content != "" ? message_content : defaultStr;
-		string callFile = m_strDefaultCallFile;
+		//WriteLog("message_content==========%s\n", message_content.c_str());
+		string callFile = callFile1!= "" ? callFile1:m_strDefaultCallFile;
+		//WriteLog("call file============%s,%s\n", callFile1.c_str(), callFile.c_str());
 		SendMessageToNpl(callFile, data);
 	}
 }
