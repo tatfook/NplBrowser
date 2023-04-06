@@ -139,7 +139,7 @@ void NplMessageWindow::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
 		{
 			message_content = message_content.replace(message_content.find(navigateionStr), navigateionStr.length(), "");
 		}
-		data["otherMsg"] = message_content != "" ? message_content : defaultStr;
+		data["msg"] = message_content != "" ? message_content : defaultStr;
 		string callFile = callFile1!= "" ? callFile1:m_strDefaultCallFile;
 		SendMessageToNpl(callFile, data);
 	}
