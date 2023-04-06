@@ -134,10 +134,13 @@ void NplMessageWindow::HandleCustomMsg(HWND hWnd, WPARAM wParam, LPARAM lParam)
 	{
 		std::string defaultStr = "test message window";
 		NPLInterface::NPLObjectProxy data;
+		std::string navigateionStr = "paracraft://sendMsg?";
+		if (message_content.find(navigateionStr) != navigateionStr.npos)
+		{
+			message_content = message_content.replace(message_content.find(navigateionStr), navigateionStr.length(), "");
+		}
 		data["otherMsg"] = message_content != "" ? message_content : defaultStr;
-		//WriteLog("message_content==========%s\n", message_content.c_str());
 		string callFile = callFile1!= "" ? callFile1:m_strDefaultCallFile;
-		//WriteLog("call file============%s,%s\n", callFile1.c_str(), callFile.c_str());
 		SendMessageToNpl(callFile, data);
 	}
 }

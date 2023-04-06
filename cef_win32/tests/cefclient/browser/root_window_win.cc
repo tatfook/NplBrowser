@@ -1259,7 +1259,7 @@ void CallJavaScriptFunc(CefRefPtr<CefBrowser> browser, std::string strFile, std:
 	CefRefPtr<CefFrame> cefFrame = browser->GetMainFrame();
 	if (cefFrame)
 	{
-		std::string strJsCode = "ActivateJsFunction(\'";
+		std::string strJsCode = "window.NPL.receive(\'";
 		strJsCode += strFile;
 		strJsCode += "\',\'";
 		strJsCode += strParams;

@@ -34,9 +34,84 @@
 #include <iostream>
 #include <vector>
 #include "tests/cefclient/CefClientConfig.h"
+#include <ShlObj.h>
+#include <string.h>
 using namespace std;
 namespace client {
 namespace {
+	std::wstring CharToWchar(const std::string& orig)
+	{
+		size_t origsize = orig.length() + 1;
+		size_t convertedChars = 0;
+		int len = sizeof(wchar_t) * (orig.length() - 1);
+		wchar_t* wcstring = new wchar_t[len + 1];
+		mbstowcs_s(&convertedChars, wcstring, origsize, orig.c_str(), _TRUNCATE);
+		wcstring[len] = '\0';
+		std::wstring wstr = wcstring;
+		delete wcstring;
+		return wstr;
+	}
+
+	//utf-8
+
+	std::wstring GetLocalAppDataPath()
+	{
+		wchar_t m_lpszDefaultDir[MAX_PATH];
+		wchar_t szDocument[MAX_PATH] = { 0 };
+		memset(m_lpszDefaultDir, 0, _MAX_PATH);
+
+		LPITEMIDLIST pidl = NULL;
+		SHGetSpecialFolderLocation(NULL, CSIDL_LOCAL_APPDATA, &pidl);
+		if (pidl && SHGetPathFromIDList(pidl, szDocument))
+		{
+			GetShortPathName(szDocument, m_lpszDefaultDir, _MAX_PATH);
+		}
+
+		std::wstring wsR = m_lpszDefaultDir;
+
+		return wsR;
+	}
+
+	std::wstring GetLocalAppDataPath(std::wstring appName,std::wstring strBasePath)
+	{
+		std::wstring path = strBasePath != L"" ? strBasePath :GetLocalAppDataPath();
+		path.append(L"\\");
+		path.append(appName);
+
+		if (_waccess(path.c_str(), 0) == -1)
+		{
+			int ret = _wmkdir(path.c_str());
+			if (ret != 0)
+			{
+				LOG(INFO) << "create cache path err code===="<< ret;
+			}
+		}
+
+		return path;
+	}
+
+	string TCHAT_to_string(TCHAR* STR)
+	{
+		int iLen = WideCharToMultiByte(CP_ACP, 0, STR, -1, nullptr, 0, nullptr, nullptr);
+		char* chRtn = new char[iLen * sizeof(char)];
+		WideCharToMultiByte(CP_ACP, 0, STR, -1, chRtn, iLen, nullptr, nullptr);
+		string str(chRtn);
+
+		int pos = str.find_last_of("\\", str.length());
+		string exePath = str.substr(0, pos);
+
+		return exePath;
+	}
+
+	string getExePath()
+	{
+		TCHAR szExePath[1024];
+		GetModuleFileName(nullptr, szExePath, sizeof(szExePath));
+
+		string exePath = TCHAT_to_string(szExePath);
+
+		return exePath;
+	}
 
 int RunMain(HINSTANCE hInstance, int nCmdShow) {
   // Enable High-DPI support on Windows 7 or newer.
@@ -79,10 +154,19 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
 #if !defined(CEF_USE_SANDBOX)
   settings.no_sandbox = true;
 #endif
-
+  std::string parent_handle_s = command_line->GetSwitchValue("parent_handle").ToString();
+  HWND parent_handle = parent_handle_s.empty() ? NULL : (HWND)std::stoull(parent_handle_s.c_str());
   // Populate the settings based on command line arguments.
   context->PopulateSettings(&settings);
   settings.multi_threaded_message_loop = true;
+  // add cache path
+  //TCHAR fullPath[MAX_PATH];
+  //::GetModuleHandleEx(DWORD(parent_handle), fullPath, MAX_PATH);//context->GetAppWorkingDirectory();
+  //strPath += "temp/";
+  //std::wstring wStrpath = CharToWchar(strPath);'
+  std::wstring wStrpath = CharToWchar(getExePath());
+  const std::wstring AppName = L"paracraftCef";
+  CefString(&settings.cache_path).FromWString(GetLocalAppDataPath(AppName, wStrpath));
   // Create the main message loop object.
   scoped_ptr<MainMessageLoop> message_loop;
   if (settings.multi_threaded_message_loop)
@@ -128,7 +212,7 @@ int RunMain(HINSTANCE hInstance, int nCmdShow) {
   std::string cefclient_config_filename = command_line->GetSwitchValue("cefclient_config_filename").ToString();
   std::string pid = command_line->GetSwitchValue("pid").ToString();
   std::string id = command_line->GetSwitchValue("window_name").ToString();
-  std::string parent_handle_s = command_line->GetSwitchValue("parent_handle").ToString();
+
   std::string key = id + "_" + parent_handle_s;
   LOG(INFO) << "cefclient_config_filename is:" << cefclient_config_filename;
   LOG(INFO) << "pid is:" << pid;

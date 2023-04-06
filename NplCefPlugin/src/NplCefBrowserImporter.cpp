@@ -275,7 +275,7 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
 	if (nType == ParaEngine::PluginActType_STATE)
 	{
 		NPL::INPLRuntimeState* pState = (NPL::INPLRuntimeState*)pVoid;
-		if (pState and m_pStaticState != pState)
+		if (pState && m_pStaticState != pState)
 		{
 			m_pStaticState = pState;
 		}
@@ -292,7 +292,6 @@ CORE_EXPORT_DECL void LibActivate(int nType, void* pVoid)
         std::string client_name = input["client_name"];
         client_name = client_name.empty() ? "cefcleint.exe" : client_name;
 		id = id.empty() ? "CEFCLIENT" : id;
-
 
 		if (cmd == "Start") {
 			std::string cmdline = input["cmdline"];
